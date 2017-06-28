@@ -58,6 +58,21 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def isvalid_gender(gender):
+    valid_genders = ['male', 'man', 'm', 'female', 'woman', 'f']
+    return gender.lower() in valid_genders
+
+
+def isvalid_measurement_system(measurementsystem):
+    valid_measurementsystems = ['imperial', 'imperial system', 'metric', 'metric system']
+    return measurementsystem.lower() in valid_measurementsystems
+
+
+def isvalid_goal(goal):
+    valid_goal = ['weight loss', 'lose weight', 'lose', 'maintain', 'maintenance', 'gain', 'gain muscle']
+    return goal.lower() in valid_goal
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -72,7 +87,18 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def validate_personalize(name, gender, age, measurementSystem, height, weight, source):
+def validate_personalize(name, gender, age, measurementsystem, height, weight, goal, source):
+    if gender is not None:
+        if not isvalid_gender(gender):
+            return build_validation_result(False, 'Gender', 'Sorry, can you repeat what gender you are?')
+    if measurementsystem is not None:
+        if not isvalid_measurement_system(measurementsystem):
+            return build_validation_result(False, 'MeasurementSystem',
+                                           'Sorry, can you repeat which measurement system you prefer?')
+    if goal is not None:
+        if not isvalid_goal(measurementsystem):
+            return build_validation_result(False, 'Goal',
+                                           'Sorry, can you repeat your goal is?')
     return build_validation_result(True, None, None)
 
 
@@ -83,9 +109,10 @@ def personalize(intent_request):
     name = get_slots(intent_request)["Name"]
     gender = get_slots(intent_request)["Gender"]
     age = get_slots(intent_request)["Age"]
-    measurementSystem = get_slots(intent_request)["MeasurementSystem"]
+    measurementsystem = get_slots(intent_request)["MeasurementSystem"]
     height = get_slots(intent_request)["Height"]
     weight = get_slots(intent_request)["Weight"]
+    goal = get_slots(intent_request)["Goal"]
     source = intent_request['invocationSource']
 
     if source == 'DialogCodeHook':
@@ -93,7 +120,7 @@ def personalize(intent_request):
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_personalize(name, gender, age, measurementSystem, height, weight, source)
+        validation_result = validate_personalize(name, gender, age, measurementsystem, height, weight, goal, source)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -101,12 +128,28 @@ def personalize(intent_request):
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
+        output_session_attributes = intent_request['sessionAttributes'] if intent_request[
+                                                                               'sessionAttributes'] is not None else {}
+        return delegate(output_session_attributes, get_slots(intent_request))
 
     # call to a backend service.
+    table.put_item(
+        Item={
+            "user": intent_request['userId'],
+            "name": name,
+            "gender": gender,
+            "age": age,
+            "measurementSystem": measurementsystem,
+            "height": height,
+            "weight": weight,
+            "goal": goal
+        }
+    )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Gottieeeem'})
+                  'content': 'Nice to meet you, {}! If you ever need help with any commands, just enter "help"'.format(
+                      name)})
 
 
 """ --- Intents --- """
