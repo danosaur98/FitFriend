@@ -1,7 +1,4 @@
 import boto3
-import math
-import dateutil.parser
-import datetime
 import time
 import os
 import logging
@@ -59,18 +56,59 @@ def delegate(session_attributes, slots):
 
 
 def isvalid_gender(gender):
-    valid_genders = ['male', 'man', 'm', 'female', 'woman', 'f']
+    valid_genders = ['male', 'female']
     return gender.lower() in valid_genders
 
 
 def isvalid_measurement_system(measurementsystem):
-    valid_measurementsystems = ['imperial', 'imperial system', 'metric', 'metric system']
+    valid_measurementsystems = ['imperial system', 'metric system']
     return measurementsystem.lower() in valid_measurementsystems
 
 
 def isvalid_goal(goal):
-    valid_goal = ['weight loss', 'lose weight', 'lose', 'maintain', 'maintenance', 'gain', 'gain muscle']
+    valid_goal = ['gain mass', 'lose weight', 'maintain weight']
     return goal.lower() in valid_goal
+
+
+def calculate_calories(gender, measurementsystem, weight, height, age, goal):
+    # calculated based on the mifflin-st jeor formula
+    # rmr is resting metabolic rate
+    # maintenance is rmr * 1.2
+    rmr_imperial_male = int(10 * (int(weight) / 2.2) + 6.25 * (int(height) * 2.54) - 5 * int(age) + 5)
+    rmr_imperial_female = int(10 * (int(weight) / 2.2) + 6.25 * (int(height) * 2.54) - 5 * int(age) - 161)
+    rmr_metric_male = int(10 * int(weight) + 6.25 * int(height) - 5 * int(age) + 5)
+    rmr_metric_female = int(10 * int(weight) + 6.25 * int(height) - 5 * int(age) - 161)
+
+    if gender.lower() == "male":
+        if measurementsystem == 'imperial system':
+            if goal == 'gain mass':
+                return int(rmr_imperial_male * 1.2) + 300
+            elif goal == 'lose weight':
+                return int(rmr_imperial_male * 0.96)
+            else:
+                return rmr_imperial_male * 1.2
+        elif measurementsystem == 'metric system':
+            if goal == 'gain mass':
+                return int(rmr_metric_male * 1.2) + 300
+            elif goal == 'lose weight':
+                return int(rmr_metric_male * 0.96)
+            else:
+                return rmr_metric_male * 1.2
+    elif gender.lower() == 'female':
+        if measurementsystem == 'imperial system':
+            if goal == 'gain mass':
+                return int(rmr_imperial_female * 1.2) + 300
+            elif goal == 'lose weight':
+                return int(rmr_imperial_female * 0.96)
+            else:
+                return rmr_imperial_female * 1.2
+        elif measurementsystem == 'metric system':
+            if goal == 'gain mass':
+                return int(rmr_metric_female * 1.2) + 300
+            elif goal == 'lose weight':
+                return int(rmr_metric_female * 0.96)
+            else:
+                return rmr_metric_female * 1.2
 
 
 def build_validation_result(is_valid, violated_slot, message_content):
@@ -96,9 +134,8 @@ def validate_personalize(name, gender, age, measurementsystem, height, weight, g
             return build_validation_result(False, 'MeasurementSystem',
                                            'Sorry, can you repeat which measurement system you prefer?')
     if goal is not None:
-        if not isvalid_goal(measurementsystem):
-            return build_validation_result(False, 'Goal',
-                                           'Sorry, can you repeat your goal is?')
+        if not isvalid_goal(goal):
+            return build_validation_result(False, 'Goal', 'Sorry, can you repeat what your goal is?')
     return build_validation_result(True, None, None)
 
 
@@ -142,7 +179,9 @@ def personalize(intent_request):
             "measurementSystem": measurementsystem,
             "height": height,
             "weight": weight,
-            "goal": goal
+            "goal": goal,
+            "caloriegoal": calculate_calories(gender, measurementsystem, weight, height, age, goal)
+
         }
     )
     return close(intent_request['sessionAttributes'],
