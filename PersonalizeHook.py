@@ -170,25 +170,27 @@ def personalize(intent_request):
         return delegate(output_session_attributes, get_slots(intent_request))
 
     # call to a backend service.
+    caloriegoal = calculate_calories(gender, measurementsystem, weight, height, age, goal)
     table.put_item(
         Item={
-            "user": intent_request['userId'],
-            "name": name,
-            "gender": gender,
-            "age": age,
-            "measurementSystem": measurementsystem,
-            "height": height,
-            "weight": weight,
-            "goal": goal,
-            "caloriegoal": calculate_calories(gender, measurementsystem, weight, height, age, goal)
+            "User": intent_request['userId'],
+            "Name": name,
+            "Gender": gender,
+            "Age": age,
+            "MeasurementSystem": measurementsystem,
+            "Height": height,
+            "Weight": weight,
+            "Goal": goal,
+            "CalorieGoal": caloriegoal
 
         }
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Nice to meet you, {}! If you ever need help with any commands, just enter "help"'.format(
-                      name)})
+                  'content': 'Nice to meet you, {}! By the way, your target calorie goal is {} with little exercise. '
+                             'If you ever need help with any commands, just enter "help"'.format(
+                      name, caloriegoal)})
 
 
 """ --- Intents --- """
