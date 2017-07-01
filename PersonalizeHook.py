@@ -173,15 +173,15 @@ def personalize(intent_request):
     caloriegoal = calculate_calories(gender, measurementsystem, weight, height, age, goal)
     table.put_item(
         Item={
-            "User": intent_request['userId'],
-            "Name": name,
-            "Gender": gender,
-            "Age": age,
-            "MeasurementSystem": measurementsystem,
-            "Height": height,
-            "Weight": weight,
-            "Goal": goal,
-            "CalorieGoal": caloriegoal
+            "user": intent_request['userId'],
+            "name": name,
+            "gender": gender,
+            "age": age,
+            "measurementSystem": measurementsystem,
+            "height": height,
+            "weight": weight,
+            "goal": goal,
+            "calorieGoal": caloriegoal
 
         }
     )

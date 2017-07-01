@@ -4,7 +4,7 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamodb.Table('Exercises')
+table = dynamodb.Table('Foods')
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -14,19 +14,6 @@ logger.setLevel(logging.DEBUG)
 
 def get_slots(intent_request):
     return intent_request['currentIntent']['slots']
-
-
-def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message):
-    return {
-        'sessionAttributes': session_attributes,
-        'dialogAction': {
-            'type': 'ElicitSlot',
-            'intentName': intent_name,
-            'slots': slots,
-            'slotToElicit': slot_to_elicit,
-            'message': message
-        }
-    }
 
 
 def close(session_attributes, fulfillment_state, message):
@@ -69,42 +56,21 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_muscle_group(muscle_group):
-    valid_muscle_groups = ['shoulder', 'arms', 'back', 'legs', 'chest', 'core']
-    return muscle_group.lower() in valid_muscle_groups
-
-
-def validate_create_exercise(name, muscle_group):
-    if muscle_group is not None:
-        if not is_valid_muscle_group(muscle_group):
-            return build_validation_result(False, 'MuscleGroup', 'Sorry, can you repeat what muscle group this '
-                                                                 'exercise is for?')
-    return build_validation_result(True, None, None)
-
-
 """ --- Functions that control the bot's behavior --- """
 
 
-def create_exercise(intent_request):
-
-
-    exercise = get_slots(intent_request)["Exercise"]
-    muscle_group = get_slots(intent_request)["MuscleGroup"]
+def create_food(intent_request):
+    food_name = get_slots(intent_request)["FoodName"]
+    serving = get_slots(intent_request)["Serving"]
+    protein = get_slots(intent_request)["Protein"]
+    carbohydrate = get_slots(intent_request)["Carbohydrate"]
+    fat = get_slots(intent_request)["Fat"]
     source = intent_request['invocationSource']
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
-
-        validation_result = validate_create_exercise(exercise, muscle_group)
-        if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
-            return elicit_slot(intent_request['sessionAttributes'],
-                               intent_request['currentIntent']['name'],
-                               slots,
-                               validation_result['violatedSlot'],
-                               validation_result['message'])
 
         output_session_attributes = intent_request['sessionAttributes'] if intent_request[
                                                                                'sessionAttributes'] is not None else {}
@@ -113,14 +79,17 @@ def create_exercise(intent_request):
     table.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "ExerciseName": exercise,
-            "MuscleGroup": muscle_group
+            "FoodName": food_name,
+            "Serving": serving,
+            "Protein": protein,
+            "carbohydrate": carbohydrate,
+            "Fat": fat
         }
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Got it! {} has been added to your exercises'.format(exercise)})
+                  'content': 'Got it! {} has been added to your foods'.format(food_name)})
 
 
 """ --- Intents --- """
@@ -137,8 +106,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'CreateExercise':
-        return create_exercise(intent_request)
+    if intent_name == 'CreateFood':
+        return create_food(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 
