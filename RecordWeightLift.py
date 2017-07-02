@@ -1,10 +1,16 @@
 import boto3
+import math
+import dateutil.parser
+import datetime
 import time
 import os
 import logging
 
+from botocore.exceptions import ClientError
+
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamodb.Table('Exercises')
+exercise_log = dynamodb.Table('ExerciseLog')
+exercises = dynamodb.Table('Exercises')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -54,6 +60,13 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def parse_int(n):
+    try:
+        return int(n)
+    except ValueError:
+        return float('nan')
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -68,27 +81,35 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_muscle_group(muscle_group):
-    valid_muscle_groups = ['shoulder', 'arms', 'back', 'legs', 'chest', 'core']
-    return muscle_group.lower() in valid_muscle_groups
+def is_valid_exercise(exercise):
+    response = exercises.get_item(
+        Key={
+            'UserID': 'universal',
+            'ExerciseName': exercise.lower()
+        }
+    )
+    try:
+        response['Item']['ExerciseName']
+        return True
+    except KeyError:
+        return False
 
 
-def validate_create_exercise(name, muscle_group):
-    if muscle_group is not None:
-        if not is_valid_muscle_group(muscle_group):
-            return build_validation_result(False, 'MuscleGroup', 'Sorry, can you repeat what muscle group this '
-                                                                 'exercise is for?')
+def validate_record_weightlift(exercise, weight, reps, sets):
+    if exercise is not None:
+        if not is_valid_exercise(exercise):
+            return build_validation_result(False, 'Exercise', 'Sorry, can you repeat what exercise you did?')
     return build_validation_result(True, None, None)
 
 
 """ --- Functions that control the bot's behavior --- """
 
 
-def create_exercise(intent_request):
-
-
-    exercise = get_slots(intent_request)["Exercise"]
-    muscle_group = get_slots(intent_request)["MuscleGroup"]
+def record_weightlift(intent_request):
+    exercise_name = get_slots(intent_request)["Exercise"]
+    weight = get_slots(intent_request)["Weight"]
+    reps = get_slots(intent_request)["Reps"]
+    sets = get_slots(intent_request)["Sets"]
     source = intent_request['invocationSource']
 
     if source == 'DialogCodeHook':
@@ -96,7 +117,7 @@ def create_exercise(intent_request):
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_create_exercise(exercise, muscle_group)
+        validation_result = validate_record_weightlift(exercise_name, weight, reps, sets)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -107,19 +128,23 @@ def create_exercise(intent_request):
 
         output_session_attributes = intent_request['sessionAttributes'] if intent_request[
                                                                                'sessionAttributes'] is not None else {}
-        return delegate(output_session_attributes, get_slots(intent_request))
 
-    table.put_item(
+        return delegate(output_session_attributes, get_slots(intent_request))
+    # datetime.date.today(),
+    exercise_log.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "ExerciseName": exercise,
-            "MuscleGroup": muscle_group
+            "Date": 'today',
+            "ExerciseName": exercise_name,
+            "Weight": weight,
+            "Reps": reps,
+            "Sets": sets
         }
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Got it! {} has been added to your exercises'.format(exercise)})
+                  'content': 'gottieeem'})
 
 
 """ --- Intents --- """
@@ -136,8 +161,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'CreateExercise':
-        return create_exercise(intent_request)
+    if intent_name == 'RecordWeightlift':
+        return record_weightlift(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

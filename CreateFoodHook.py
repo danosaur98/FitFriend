@@ -5,7 +5,6 @@ import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('Foods')
-
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
