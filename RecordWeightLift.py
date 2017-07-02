@@ -81,7 +81,7 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_exercise(exercise):
+def is_valid_exercise(exercise, intent_request):
     response = exercises.get_item(
         Key={
             'UserID': 'universal',
@@ -92,13 +92,24 @@ def is_valid_exercise(exercise):
         response['Item']['ExerciseName']
         return True
     except KeyError:
-        return False
+        response = exercises.get_item(
+            Key={
+                'UserID': intent_request['userId'],
+                'ExerciseName': exercise.lower()
+            }
+        )
+        try:
+            response['Item']['ExerciseName']
+            return True
+        except KeyError:
+            return False
 
 
-def validate_record_weightlift(exercise, weight, reps, sets):
+def validate_record_weightlift(exercise, weight, reps, sets, intent_request):
     if exercise is not None:
-        if not is_valid_exercise(exercise):
+        if not is_valid_exercise(exercise, intent_request):
             return build_validation_result(False, 'Exercise', 'Sorry, can you repeat what exercise you did?')
+
     return build_validation_result(True, None, None)
 
 
@@ -117,7 +128,7 @@ def record_weightlift(intent_request):
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_record_weightlift(exercise_name, weight, reps, sets)
+        validation_result = validate_record_weightlift(exercise_name, weight, reps, sets, intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
