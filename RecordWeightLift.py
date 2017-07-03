@@ -157,7 +157,7 @@ def record_weightlift(intent_request):
                 'CreateExercise',
                 {
                     'Exercise': exercise_name,
-                    'MuscleGroup': None
+                    'MuscleGroup': 'test'
                 },
                 {
                     'contentType': 'PlainText',
@@ -183,8 +183,10 @@ def record_weightlift(intent_request):
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
-                 {'contentType': 'PlainText',
-                  'content': 'Keep going!'})
+                 {
+                     'contentType': 'PlainText',
+                     'content': 'Keep going!'
+                 })
 
 
 """ --- Intents --- """

@@ -76,8 +76,8 @@ def is_valid_muscle_group(muscle_group):
 def validate_create_exercise(name, muscle_group):
     if muscle_group is not None:
         if not is_valid_muscle_group(muscle_group):
-            return build_validation_result(False, 'MuscleGroup', 'Sorry, can you repeat what muscle group this '
-                                                                 'exercise is for?')
+            return build_validation_result(False, 'MuscleGroup', 'Does {} primarily work the arms, back, chest, core, '
+                                                                 'shoulder, or legs?'.format(name))
     return build_validation_result(True, None, None)
 
 
