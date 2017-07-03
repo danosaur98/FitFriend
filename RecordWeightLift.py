@@ -1,12 +1,7 @@
 import boto3
-import math
-import dateutil.parser
-import datetime
 import time
 import os
 import logging
-
-from botocore.exceptions import ClientError
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 exercise_log = dynamodb.Table('ExerciseLog')
@@ -29,6 +24,18 @@ def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message)
             'intentName': intent_name,
             'slots': slots,
             'slotToElicit': slot_to_elicit,
+            'message': message
+        }
+    }
+
+
+def confirm_intent(session_attributes, intent_name, slots, message):
+    return {
+        'sessionAttributes': session_attributes,
+        'dialogAction': {
+            'type': 'ConfirmIntent',
+            'intentName': intent_name,
+            'slots': slots,
             'message': message
         }
     }
@@ -60,6 +67,20 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def try_ex(func):
+    """
+    Call passed in function in try block. If KeyError is encountered return None.
+    This function is intended to be used to safely access dictionary.
+
+    Note that this function would have negative impact on performance.
+    """
+
+    try:
+        return func()
+    except KeyError:
+        return None
+
+
 def parse_int(n):
     try:
         return int(n)
@@ -88,27 +109,25 @@ def is_valid_exercise(exercise, intent_request):
             'ExerciseName': exercise.lower()
         }
     )
-    try:
-        response['Item']['ExerciseName']
+    if 'Item' in response:
         return True
-    except KeyError:
+    else:
         response = exercises.get_item(
             Key={
                 'UserID': intent_request['userId'],
                 'ExerciseName': exercise.lower()
             }
         )
-        try:
-            response['Item']['ExerciseName']
+        if 'Item' in response:
             return True
-        except KeyError:
-            return False
+    return False
 
 
 def validate_record_weightlift(exercise, weight, reps, sets, intent_request):
     if exercise is not None:
         if not is_valid_exercise(exercise, intent_request):
-            return build_validation_result(False, 'Exercise', 'Sorry, can you repeat what exercise you did?')
+            return build_validation_result(False, 'Exercise', '{} is not recognized as one of your exercises. Would '
+                                                              'you like to add it?'.format(exercise))
 
     return build_validation_result(True, None, None)
 
@@ -131,21 +150,31 @@ def record_weightlift(intent_request):
         validation_result = validate_record_weightlift(exercise_name, weight, reps, sets, intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
-            return elicit_slot(intent_request['sessionAttributes'],
-                               intent_request['currentIntent']['name'],
-                               slots,
-                               validation_result['violatedSlot'],
-                               validation_result['message'])
+
+            return confirm_intent(
+                intent_request['sessionAttributes'] if intent_request[
+                                                           'sessionAttributes'] is not None else {},
+                'CreateExercise',
+                {
+                    'Exercise': exercise_name,
+                    'MuscleGroup': None
+                },
+                {
+                    'contentType': 'PlainText',
+                    'content': '{} is not recognized as one of your exercises. Would '
+                               'you like to add it?'.format(exercise_name)
+
+                }
+            )
 
         output_session_attributes = intent_request['sessionAttributes'] if intent_request[
                                                                                'sessionAttributes'] is not None else {}
 
         return delegate(output_session_attributes, get_slots(intent_request))
-    # datetime.date.today(),
     exercise_log.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "Date": 'today',
+            "Date": time.strftime("%d/%m/%Y"),
             "ExerciseName": exercise_name,
             "Weight": weight,
             "Reps": reps,
@@ -155,7 +184,7 @@ def record_weightlift(intent_request):
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'gottieeem'})
+                  'content': 'Keep going!'})
 
 
 """ --- Intents --- """
