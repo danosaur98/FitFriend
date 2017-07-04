@@ -141,6 +141,8 @@ def record_weightlift(intent_request):
     reps = get_slots(intent_request)["Reps"]
     sets = get_slots(intent_request)["Sets"]
     source = intent_request['invocationSource']
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -152,12 +154,11 @@ def record_weightlift(intent_request):
             slots[validation_result['violatedSlot']] = None
 
             return confirm_intent(
-                intent_request['sessionAttributes'] if intent_request[
-                                                           'sessionAttributes'] is not None else {},
+                session_attributes,
                 'CreateExercise',
                 {
                     'Exercise': exercise_name,
-                    'MuscleGroup': 'test'
+                    'MuscleGroup': 'filler'  # will be changed by user
                 },
                 {
                     'contentType': 'PlainText',
@@ -167,10 +168,7 @@ def record_weightlift(intent_request):
                 }
             )
 
-        output_session_attributes = intent_request['sessionAttributes'] if intent_request[
-                                                                               'sessionAttributes'] is not None else {}
-
-        return delegate(output_session_attributes, get_slots(intent_request))
+        return delegate(session_attributes, get_slots(intent_request))
     exercise_log.put_item(
         Item={
             "UserID": intent_request['userId'],

@@ -85,11 +85,11 @@ def validate_create_exercise(name, muscle_group):
 
 
 def create_exercise(intent_request):
-
-
     exercise = get_slots(intent_request)["Exercise"]
     muscle_group = get_slots(intent_request)["MuscleGroup"]
     source = intent_request['invocationSource']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -97,6 +97,12 @@ def create_exercise(intent_request):
         slots = get_slots(intent_request)
 
         validation_result = validate_create_exercise(exercise, muscle_group)
+        if confirmation_status == 'Denied':
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {'contentType': 'PlainText',
+                          'content': 'It\'s all good in the hood!'})
+
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -104,11 +110,7 @@ def create_exercise(intent_request):
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
-
-        output_session_attributes = intent_request['sessionAttributes'] if intent_request[
-                                                                               'sessionAttributes'] is not None else {}
-        return delegate(output_session_attributes, get_slots(intent_request))
-
+        return delegate(session_attributes, get_slots(intent_request))
     table.put_item(
         Item={
             "UserID": intent_request['userId'],
@@ -116,6 +118,11 @@ def create_exercise(intent_request):
             "MuscleGroup": muscle_group
         }
     )
+    #if confirmation_status == 'Confirmed':
+    #    return confirm_intent(
+    #        session_attributes
+    #    )
+
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
