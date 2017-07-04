@@ -28,6 +28,18 @@ def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message)
     }
 
 
+def confirm_intent(session_attributes, intent_name, slots, message):
+    return {
+        'sessionAttributes': session_attributes,
+        'dialogAction': {
+            'type': 'ConfirmIntent',
+            'intentName': intent_name,
+            'slots': slots,
+            'message': message
+        }
+    }
+
+
 def close(session_attributes, fulfillment_state, message):
     response = {
         'sessionAttributes': session_attributes,
@@ -52,6 +64,20 @@ def delegate(session_attributes, slots):
 
 
 """ --- Helper Functions --- """
+
+
+def try_ex(func):
+    """
+    Call passed in function in try block. If KeyError is encountered return None.
+    This function is intended to be used to safely access dictionary.
+
+    Note that this function would have negative impact on performance.
+    """
+
+    try:
+        return func()
+    except KeyError:
+        return None
 
 
 def build_validation_result(is_valid, violated_slot, message_content):
@@ -88,29 +114,65 @@ def create_exercise(intent_request):
     exercise = get_slots(intent_request)["Exercise"]
     muscle_group = get_slots(intent_request)["MuscleGroup"]
     source = intent_request['invocationSource']
-    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_create_exercise(exercise, muscle_group)
         if confirmation_status == 'Denied':
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
+        if confirmation_status == 'None':
+            validation_result = validate_create_exercise(exercise, muscle_group)
+            if not validation_result['isValid']:
+                slots[validation_result['violatedSlot']] = None
+                return elicit_slot(intent_request['sessionAttributes'],
+                                   intent_request['currentIntent']['name'],
+                                   slots,
+                                   validation_result['violatedSlot'],
+                                   validation_result['message'])
+            return delegate(session_attributes, get_slots(intent_request))
+        if confirmation_status == 'Confirmed':
+            if not muscle_group:
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    'MuscleGroup',
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'Does {} primarily work the arms, back, chest, core, '
+                                   'shoulder, or legs?'.format(exercise)
+                    }
+                )
+            table.put_item(
+                Item={
+                    "UserID": intent_request['userId'],
+                    "ExerciseName": exercise,
+                    "MuscleGroup": muscle_group
+                }
+            )
+            return confirm_intent(
+                session_attributes,
+                'RecordWeightlift',
+                {
+                    'Exercise': exercise,
+                    'Weight': None,
+                    'Reps': None,
+                    'Sets': None
+                },
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Got it! {} has been added to your exercises. Would you like to continue tracking your '
+                               'progress?'.format(exercise)
+                }
+            )
 
-        if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
-            return elicit_slot(intent_request['sessionAttributes'],
-                               intent_request['currentIntent']['name'],
-                               slots,
-                               validation_result['violatedSlot'],
-                               validation_result['message'])
-        return delegate(session_attributes, get_slots(intent_request))
     table.put_item(
         Item={
             "UserID": intent_request['userId'],
@@ -118,10 +180,6 @@ def create_exercise(intent_request):
             "MuscleGroup": muscle_group
         }
     )
-    #if confirmation_status == 'Confirmed':
-    #    return confirm_intent(
-    #        session_attributes
-    #    )
 
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',

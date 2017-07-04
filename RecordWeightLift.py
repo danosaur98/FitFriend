@@ -141,7 +141,6 @@ def record_weightlift(intent_request):
     reps = get_slots(intent_request)["Reps"]
     sets = get_slots(intent_request)["Sets"]
     source = intent_request['invocationSource']
-    confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
@@ -158,7 +157,7 @@ def record_weightlift(intent_request):
                 'CreateExercise',
                 {
                     'Exercise': exercise_name,
-                    'MuscleGroup': 'filler'  # will be changed by user
+                    'MuscleGroup': None
                 },
                 {
                     'contentType': 'PlainText',
