@@ -138,6 +138,7 @@ def create_exercise(intent_request):
                                    validation_result['message'])
             return delegate(session_attributes, get_slots(intent_request))
         if confirmation_status == 'Confirmed':
+            session_attributes['chainRecordWeightLift'] = True
             if not muscle_group:
                 return elicit_slot(
                     session_attributes,
@@ -150,28 +151,6 @@ def create_exercise(intent_request):
                                    'shoulder, or legs?'.format(exercise)
                     }
                 )
-            table.put_item(
-                Item={
-                    "UserID": intent_request['userId'],
-                    "ExerciseName": exercise,
-                    "MuscleGroup": muscle_group
-                }
-            )
-            return confirm_intent(
-                session_attributes,
-                'RecordWeightlift',
-                {
-                    'Exercise': exercise,
-                    'Weight': None,
-                    'Reps': None,
-                    'Sets': None
-                },
-                {
-                    'contentType': 'PlainText',
-                    'content': 'Got it! {} has been added to your exercises. Would you like to continue tracking your '
-                               'progress?'.format(exercise)
-                }
-            )
 
     table.put_item(
         Item={
@@ -180,11 +159,29 @@ def create_exercise(intent_request):
             "MuscleGroup": muscle_group
         }
     )
-
-    return close(intent_request['sessionAttributes'],
-                 'Fulfilled',
-                 {'contentType': 'PlainText',
-                  'content': 'Got it! {} has been added to your exercises'.format(exercise)})
+    if try_ex(lambda: session_attributes['chainRecordWeightLift']):
+        try_ex(lambda: session_attributes.pop('chainRecordWeightLift'))
+        return confirm_intent(
+            session_attributes,
+            'RecordWeightlift',
+            {
+                'Exercise': exercise,
+                'Weight': None,
+                'Reps': None,
+                'Sets': None
+            },
+            {
+                'contentType': 'PlainText',
+                'content': 'Got it! {} has been added to your exercises. Would you like to finish inputting your '
+                           'workout?'.format(
+                    exercise)
+            }
+        )
+    else:
+        return close(intent_request['sessionAttributes'],
+                     'Fulfilled',
+                     {'contentType': 'PlainText',
+                      'content': 'Got it! {} has been added to your exercises'.format(exercise)})
 
 
 """ --- Intents --- """
