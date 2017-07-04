@@ -4,8 +4,8 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-exercise_log = dynamodb.Table('ExerciseLog')
-exercises = dynamodb.Table('Exercises')
+food_log = dynamodb.Table('FoodLog')
+foods = dynamodb.Table('Foods')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -81,13 +81,6 @@ def try_ex(func):
         return None
 
 
-def parse_int(n):
-    try:
-        return int(n)
-    except ValueError:
-        return float('nan')
-
-
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -102,20 +95,20 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_exercise(exercise, intent_request):
-    response = exercises.get_item(
+def is_valid_food(food_name, intent_request):
+    response = foods.get_item(
         Key={
             'UserID': 'universal',
-            'ExerciseName': exercise.lower()
+            'FoodName': food_name.lower()
         }
     )
     if 'Item' in response:
         return True
     else:
-        response = exercises.get_item(
+        response = foods.get_item(
             Key={
                 'UserID': intent_request['userId'],
-                'ExerciseName': exercise.lower()
+                'FoodName': food_name.lower()
             }
         )
         if 'Item' in response:
@@ -123,11 +116,11 @@ def is_valid_exercise(exercise, intent_request):
     return False
 
 
-def validate_record_weightlift(exercise, weight, reps, sets, intent_request):
-    if exercise is not None:
-        if not is_valid_exercise(exercise, intent_request):
-            return build_validation_result(False, 'Exercise', '{} is not recognized as one of your exercises. Would '
-                                                              'you like to add it?'.format(exercise))
+def validate_record_meal(food_name, measurement, intent_request):
+    if food_name is not None:
+        if not is_valid_food(food_name, intent_request):
+            return build_validation_result(False, 'FoodName', '{} is not recognized as one of your foods. Would '
+                                                              'you like to add it?'.format(food_name))
 
     return build_validation_result(True, None, None)
 
@@ -135,11 +128,9 @@ def validate_record_weightlift(exercise, weight, reps, sets, intent_request):
 """ --- Functions that control the bot's behavior --- """
 
 
-def record_weightlift(intent_request):
-    exercise_name = get_slots(intent_request)["Exercise"]
-    weight = get_slots(intent_request)["Weight"]
-    reps = get_slots(intent_request)["Reps"]
-    sets = get_slots(intent_request)["Sets"]
+def record_meal(intent_request):
+    food_name = get_slots(intent_request)["FoodName"]
+    measurement = get_slots(intent_request)["Measurement"]
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
@@ -148,41 +139,42 @@ def record_weightlift(intent_request):
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_record_weightlift(exercise_name, weight, reps, sets, intent_request)
+        validation_result = validate_record_meal(food_name, measurement, intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
 
             return confirm_intent(
                 session_attributes,
-                'CreateExercise',
+                'CreateFood',
                 {
-                    'Exercise': exercise_name,
-                    'MuscleGroup': None
+                    'FoodName': food_name,
+                    'Serving': None,
+                    'Protein': None,
+                    'Carbohydrate': None,
+                    'Fat': None
                 },
                 {
                     'contentType': 'PlainText',
-                    'content': '{} is not recognized as one of your exercises. Would '
-                               'you like to add it?'.format(exercise_name)
+                    'content': '{} is not recognized as one of your foods. Would '
+                               'you like to add it?'.format(food_name)
 
                 }
             )
 
         return delegate(session_attributes, get_slots(intent_request))
-    exercise_log.put_item(
+    food_log.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "Date": time.strftime("%d/%m/%Y"),
-            "ExerciseName": exercise_name,
-            "Weight": weight,
-            "Reps": reps,
-            "Sets": sets
+            "Date": time.strftime("%m/%d/%Y"),
+            "FoodName": food_name,
+            "Measurement": measurement,
         }
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': 'Keep going!'
+                     'content': 'Yum!'
                  })
 
 
@@ -200,8 +192,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'RecordWeightlift':
-        return record_weightlift(intent_request)
+    if intent_name == 'RecordMeal':
+        return record_meal(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

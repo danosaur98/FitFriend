@@ -15,6 +15,31 @@ def get_slots(intent_request):
     return intent_request['currentIntent']['slots']
 
 
+def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message):
+    return {
+        'sessionAttributes': session_attributes,
+        'dialogAction': {
+            'type': 'ElicitSlot',
+            'intentName': intent_name,
+            'slots': slots,
+            'slotToElicit': slot_to_elicit,
+            'message': message
+        }
+    }
+
+
+def confirm_intent(session_attributes, intent_name, slots, message):
+    return {
+        'sessionAttributes': session_attributes,
+        'dialogAction': {
+            'type': 'ConfirmIntent',
+            'intentName': intent_name,
+            'slots': slots,
+            'message': message
+        }
+    }
+
+
 def close(session_attributes, fulfillment_state, message):
     response = {
         'sessionAttributes': session_attributes,
@@ -41,6 +66,20 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def try_ex(func):
+    """
+    Call passed in function in try block. If KeyError is encountered return None.
+    This function is intended to be used to safely access dictionary.
+
+    Note that this function would have negative impact on performance.
+    """
+
+    try:
+        return func()
+    except KeyError:
+        return None
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -55,6 +94,11 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
+
+def validate_create_food(food_name, serving, protein, carbohydrate, fat):
+    return build_validation_result(True, None, None)
+
+
 """ --- Functions that control the bot's behavior --- """
 
 
@@ -65,15 +109,75 @@ def create_food(intent_request):
     carbohydrate = get_slots(intent_request)["Carbohydrate"]
     fat = get_slots(intent_request)["Fat"]
     source = intent_request['invocationSource']
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        output_session_attributes = intent_request['sessionAttributes'] if intent_request[
-                                                                               'sessionAttributes'] is not None else {}
-        return delegate(output_session_attributes, get_slots(intent_request))
+        if confirmation_status == 'Denied':
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {'contentType': 'PlainText',
+                          'content': 'It\'s all good in the hood!'})
+        if confirmation_status == 'None':
+            validation_result = validate_create_food(food_name, serving, protein, carbohydrate, fat)
+            if not validation_result['isValid']:
+                slots[validation_result['violatedSlot']] = None
+                return elicit_slot(intent_request['sessionAttributes'],
+                                   intent_request['currentIntent']['name'],
+                                   slots,
+                                   validation_result['violatedSlot'],
+                                   validation_result['message'])
+            return delegate(session_attributes, get_slots(intent_request))
+        if confirmation_status == 'Confirmed':
+            session_attributes['chainRecordMeal'] = True
+            if not serving:
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    'Serving',
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'How many grams in one serving?'
+                    }
+                )
+            elif not protein:
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    'Protein',
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'How many grams of protein in one serving?'
+                    }
+                )
+            elif not carbohydrate:
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    'Carbohydrate',
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'How many grams of carbohydrates in one serving?'
+                    }
+                )
+            elif not fat:
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    'Fat',
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'How many grams of fat in one serving?'
+                    }
+                )
 
     table.put_item(
         Item={
@@ -81,14 +185,31 @@ def create_food(intent_request):
             "FoodName": food_name,
             "Serving": serving,
             "Protein": protein,
-            "carbohydrate": carbohydrate,
+            "Carbohydrate": carbohydrate,
             "Fat": fat
         }
     )
-    return close(intent_request['sessionAttributes'],
-                 'Fulfilled',
-                 {'contentType': 'PlainText',
-                  'content': 'Got it! {} has been added to your foods'.format(food_name)})
+    if try_ex(lambda: session_attributes['chainRecordMeal']):
+        try_ex(lambda: session_attributes.pop('chainRecordMeal'))
+        return confirm_intent(
+            session_attributes,
+            'RecordMeal',
+            {
+                'FoodName': food_name,
+                'Measurement': None,
+            },
+            {
+                'contentType': 'PlainText',
+                'content': 'Got it! {} has been added to your foods. Would you like to finish inputting your '
+                           'meal?'.format(
+                    food_name)
+            }
+        )
+    else:
+        return close(intent_request['sessionAttributes'],
+                     'Fulfilled',
+                     {'contentType': 'PlainText',
+                      'content': 'Got it! {} has been added to your foods'.format(food_name)})
 
 
 """ --- Intents --- """
