@@ -109,6 +109,18 @@ def calculate_calories(gender, measurementsystem, weight, height, age, goal, act
         activity) * get_goal_multiplier(goal))
 
 
+def calculate_macronutrient(goal, calories):
+    if goal == 'lose weight':
+        return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
+                'fat': int(.3 * calories / 9)}
+    elif goal == 'gain mass':
+        return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.5 * calories / 4),
+                'fat': int(.2 * calories / 9)}
+    else:
+        return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
+                'fat': int(.3 * calories / 9)}
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -171,9 +183,10 @@ def personalize(intent_request):
 
     # call to a backend service.
     calorie_goal = calculate_calories(gender, measurementsystem, weight, height, age, goal, activity)
-    protein_goal = 1
-    carbohydrate_goal = 1
-    fat_goal = 1
+    macronutrients = calculate_macronutrient(goal, calorie_goal)
+    protein_goal = macronutrients['protein']
+    carbohydrate_goal = macronutrients['carbohydrate']
+    fat_goal = macronutrients['fat']
     table.put_item(
         Item={
             "user": intent_request['userId'],
