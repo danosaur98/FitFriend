@@ -69,45 +69,44 @@ def isvalid_goal(goal):
     return goal.lower() in valid_goal
 
 
-def calculate_calories(gender, measurementsystem, weight, height, age, goal):
+def get_activity_multiplier(activity):
+    if activity == 'sedentary':
+        return 1.2
+    elif activity == 'moderate':
+        return 1.375
+    else:
+        return 1.725
+
+
+def get_goal_multiplier(goal):
+    if goal == 'gain mass':
+        return 1.2
+    elif goal == 'lose weight':
+        return 0.8
+    else:
+        return 1
+
+
+def get_rmr(gender, measurementsystem, weight, height, age):
     # calculated based on the mifflin-st jeor formula
-    # rmr is resting metabolic rate
-    # maintenance is rmr * 1.2
-    rmr_imperial_male = int(10 * (int(weight) / 2.2) + 6.25 * (int(height) * 2.54) - 5 * int(age) + 5)
-    rmr_imperial_female = int(10 * (int(weight) / 2.2) + 6.25 * (int(height) * 2.54) - 5 * int(age) - 161)
-    rmr_metric_male = int(10 * int(weight) + 6.25 * int(height) - 5 * int(age) + 5)
-    rmr_metric_female = int(10 * int(weight) + 6.25 * int(height) - 5 * int(age) - 161)
 
     if gender.lower() == "male":
         if measurementsystem == 'imperial system':
-            if goal == 'gain mass':
-                return int(rmr_imperial_male * 1.2) + 300
-            elif goal == 'lose weight':
-                return int(rmr_imperial_male * 0.96)
-            else:
-                return rmr_imperial_male * 1.2
+            return int(10 * (int(weight) / 2.2) + 6.25 * (int(height) * 2.54) - 5 * int(age) + 5)
         elif measurementsystem == 'metric system':
-            if goal == 'gain mass':
-                return int(rmr_metric_male * 1.2) + 300
-            elif goal == 'lose weight':
-                return int(rmr_metric_male * 0.96)
-            else:
-                return rmr_metric_male * 1.2
+            return int(10 * int(weight) + 6.25 * int(height) - 5 * int(age) + 5)
     elif gender.lower() == 'female':
         if measurementsystem == 'imperial system':
-            if goal == 'gain mass':
-                return int(rmr_imperial_female * 1.2) + 300
-            elif goal == 'lose weight':
-                return int(rmr_imperial_female * 0.96)
-            else:
-                return rmr_imperial_female * 1.2
+            return int(10 * (int(weight) / 2.2) + 6.25 * (int(height) * 2.54) - 5 * int(age) - 161)
         elif measurementsystem == 'metric system':
-            if goal == 'gain mass':
-                return int(rmr_metric_female * 1.2) + 300
-            elif goal == 'lose weight':
-                return int(rmr_metric_female * 0.96)
-            else:
-                return rmr_metric_female * 1.2
+            return int(10 * int(weight) + 6.25 * int(height) - 5 * int(age) - 161)
+
+
+def calculate_calories(gender, measurementsystem, weight, height, age, goal, activity):
+    # rmr is resting metabolic rate
+    # maintenance is rmr * 1.2
+    return int(get_rmr(gender, measurementsystem, weight, height, age) * get_activity_multiplier(
+        activity) * get_goal_multiplier(goal))
 
 
 def build_validation_result(is_valid, violated_slot, message_content):
@@ -124,7 +123,7 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def validate_personalize(name, gender, age, measurementsystem, height, weight, goal, source):
+def validate_personalize(name, gender, age, measurementsystem, height, weight, goal, activity, source):
     if gender is not None:
         if not isvalid_gender(gender):
             return build_validation_result(False, 'Gender', 'Sorry, can you repeat what gender you are?')
@@ -149,6 +148,7 @@ def personalize(intent_request):
     height = get_slots(intent_request)["Height"]
     weight = get_slots(intent_request)["Weight"]
     goal = get_slots(intent_request)["Goal"]
+    activity = get_slots(intent_request)["Activity"]
     source = intent_request['invocationSource']
 
     if source == 'DialogCodeHook':
@@ -156,7 +156,8 @@ def personalize(intent_request):
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_personalize(name, gender, age, measurementsystem, height, weight, goal, source)
+        validation_result = validate_personalize(name, gender, age, measurementsystem, height, weight, goal, activity,
+                                                 source)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -169,7 +170,7 @@ def personalize(intent_request):
         return delegate(output_session_attributes, get_slots(intent_request))
 
     # call to a backend service.
-    calorie_goal = calculate_calories(gender, measurementsystem, weight, height, age, goal)
+    calorie_goal = calculate_calories(gender, measurementsystem, weight, height, age, goal, activity)
     protein_goal = 1
     carbohydrate_goal = 1
     fat_goal = 1
@@ -183,6 +184,7 @@ def personalize(intent_request):
             "height": height,
             "weight": weight,
             "goal": goal,
+            "activity": activity,
             "calorieGoal": calorie_goal,
             "proteinGoal": protein_goal,
             "carbohydrateGoal": carbohydrate_goal,
@@ -193,7 +195,7 @@ def personalize(intent_request):
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Nice to meet you, {}! Your your target calorie goal is {} with little exercise, '
+                  'content': 'Nice to meet you, {}! Your your target calorie goal is {}, '
                              'your protein goal is {}g, your carbohydrate goal is {}g, and your fat goal is {}g. If '
                              'you want to set your own goals, just type \'I would like to set my own goals\' If you '
                              'ever need help with any commands, just enter "help"'.format(name, calorie_goal,
