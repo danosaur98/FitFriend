@@ -94,7 +94,6 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-
 def validate_create_food(food_name, serving, protein, carbohydrate, fat):
     return build_validation_result(True, None, None)
 
@@ -201,8 +200,7 @@ def create_food(intent_request):
             {
                 'contentType': 'PlainText',
                 'content': 'Got it! {} has been added to your foods. Would you like to finish inputting your '
-                           'meal?'.format(
-                    food_name)
+                           'meal?'.format(food_name)
             }
         )
     else:

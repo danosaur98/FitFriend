@@ -169,7 +169,10 @@ def personalize(intent_request):
         return delegate(output_session_attributes, get_slots(intent_request))
 
     # call to a backend service.
-    caloriegoal = calculate_calories(gender, measurementsystem, weight, height, age, goal)
+    calorie_goal = calculate_calories(gender, measurementsystem, weight, height, age, goal)
+    protein_goal = 1
+    carbohydrate_goal = 1
+    fat_goal = 1
     table.put_item(
         Item={
             "user": intent_request['userId'],
@@ -180,16 +183,23 @@ def personalize(intent_request):
             "height": height,
             "weight": weight,
             "goal": goal,
-            "calorieGoal": caloriegoal
+            "calorieGoal": calorie_goal,
+            "proteinGoal": protein_goal,
+            "carbohydrateGoal": carbohydrate_goal,
+            "fatGoal": fat_goal
 
         }
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Nice to meet you, {}! By the way, your target calorie goal is {} with little exercise. '
-                             'If you ever need help with any commands, just enter "help"'.format(
-                      name, caloriegoal)})
+                  'content': 'Nice to meet you, {}! Your your target calorie goal is {} with little exercise, '
+                             'your protein goal is {}g, your carbohydrate goal is {}g, and your fat goal is {}g. If '
+                             'you want to set your own goals, just type \'I would like to set my own goals\' If you '
+                             'ever need help with any commands, just enter "help"'.format(name, calorie_goal,
+                                                                                          protein_goal,
+                                                                                          carbohydrate_goal,
+                                                                                          fat_goal)})
 
 
 """ --- Intents --- """
