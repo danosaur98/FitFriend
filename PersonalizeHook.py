@@ -208,9 +208,9 @@ def personalize(intent_request):
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {'contentType': 'PlainText',
-                  'content': 'Nice to meet you, {}! Your your target calorie goal is {}, '
+                  'content': 'Nice to meet you, {}! Your daily target calorie goal is {}, '
                              'your protein goal is {}g, your carbohydrate goal is {}g, and your fat goal is {}g. If '
-                             'you want to set your own goals, just type \'I would like to set my own goals\' If you '
+                             'you want to set your own goals, just type \'I would like to set my own goals\'. If you '
                              'ever need help with any commands, just enter "help"'.format(name, calorie_goal,
                                                                                           protein_goal,
                                                                                           carbohydrate_goal,
