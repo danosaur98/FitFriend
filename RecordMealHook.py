@@ -109,9 +109,24 @@ def calculate_nutrition(food_name, measurement, measurement_type, intent_request
             'FoodName': food_name.lower()
         }
     )
+    calorie, protein, carbohydrate, fat = None
     if measurement_type == 'servings':
-        return {'calories': measurement * food_information['Item']['Calorie']}
-    elif measurement_type == ' grams':
+        calorie = int(measurement * food_information['Item']['Calorie'])
+        protein = int(measurement * food_information['Item']['Protein'])
+        carbohydrate = int(measurement * food_information['Item']['Carbohydrate'])
+        fat = int(measurement * food_information['Item']['Fat'])
+    elif measurement_type == 'grams':
+        serving = measurement / food_information['Item']['Serving']
+        calorie = int(serving * food_information['Item']['Calorie'])
+        protein = int(serving * food_information['Item']['Protein'])
+        carbohydrate = int(serving * food_information['Item']['Carbohydrate'])
+        fat = int(serving * food_information['Item']['Fat'])
+    return {'calorie': calorie, 'protein': protein, 'carbohydrate': carbohydrate, 'fat': fat}
+
+
+def get_remaining_daily_nutrition(intent_request):
+    pass
+
 
 def is_valid_food(food_name, intent_request):
     response = foods.get_item(
@@ -192,10 +207,14 @@ def record_meal(intent_request):
                                validation_result['violatedSlot'],
                                validation_result['message'])
         if food_name and measurement and measurement_type is not None:
-            session_attributes['RemainingCalories'] = remaining_nutrition(calories)
-            session_attributes['RemainingProtein'] = remaining_protein
-            session_attributes['RemainingCarbohydrate'] = remaining_carbohydrate
-            session_attributes['RemainingFat'] = remaining_fat
+            remaining_nutrition = get_remaining_daily_nutrition(intent_request)
+            meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
+
+            session_attributes['RemainingCalories'] = remaining_nutrition['calorie'] - meal_nutrition['calorie']
+            session_attributes['RemainingProtein'] = remaining_nutrition['protein'] - meal_nutrition['protein']
+            session_attributes['RemainingCarbohydrate'] = remaining_nutrition['carbohydrate'] - meal_nutrition[
+                'carbohydrate']
+            session_attributes['RemainingFat'] = remaining_nutrition['fat'] - meal_nutrition['fat']
         return delegate(session_attributes, get_slots(intent_request))
     food_log.put_item(
         Item={
@@ -205,6 +224,9 @@ def record_meal(intent_request):
             "Measurement": measurement,
         }
     )
+    remaining_nutrition = get_remaining_daily_nutrition(intent_request)
+    meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
+
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {
