@@ -116,12 +116,19 @@ def is_valid_food(food_name, intent_request):
     return False
 
 
-def validate_record_meal(food_name, measurement, intent_request):
+def is_valid_measurement_type(measurement_type):
+    valid_measurement_types = ['grams', 'gram', 'g', 'servings', 'serving']
+    return measurement_type.lower() in valid_measurement_types
+
+
+def validate_record_meal(food_name, measurement, measurement_type, intent_request):
     if food_name is not None:
         if not is_valid_food(food_name, intent_request):
             return build_validation_result(False, 'FoodName', '{} is not recognized as one of your foods. Would '
                                                               'you like to add it?'.format(food_name))
-
+    if measurement_type is not None:
+        if not is_valid_measurement_type(measurement_type):
+            return build_validation_result(False, 'MeasurementType', 'Sorry, was that in servings or grams?')
     return build_validation_result(True, None, None)
 
 
@@ -131,6 +138,7 @@ def validate_record_meal(food_name, measurement, intent_request):
 def record_meal(intent_request):
     food_name = get_slots(intent_request)["FoodName"]
     measurement = get_slots(intent_request)["Measurement"]
+    measurement_type = get_slots(intent_request)["MeasurementType"]
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
@@ -138,28 +146,32 @@ def record_meal(intent_request):
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
-
-        validation_result = validate_record_meal(food_name, measurement, intent_request)
+        validation_result = validate_record_meal(food_name, measurement, measurement_type, intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
+            if not is_valid_food(food_name, intent_request):
+                return confirm_intent(
+                    session_attributes,
+                    'CreateFood',
+                    {
+                        'FoodName': food_name,
+                        'Serving': None,
+                        'Protein': None,
+                        'Carbohydrate': None,
+                        'Fat': None
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': '{} is not recognized as one of your foods. Would '
+                                   'you like to add it?'.format(food_name)
 
-            return confirm_intent(
-                session_attributes,
-                'CreateFood',
-                {
-                    'FoodName': food_name,
-                    'Serving': None,
-                    'Protein': None,
-                    'Carbohydrate': None,
-                    'Fat': None
-                },
-                {
-                    'contentType': 'PlainText',
-                    'content': '{} is not recognized as one of your foods. Would '
-                               'you like to add it?'.format(food_name)
-
-                }
-            )
+                    }
+                )
+            return elicit_slot(intent_request['sessionAttributes'],
+                               intent_request['currentIntent']['name'],
+                               slots,
+                               validation_result['violatedSlot'],
+                               validation_result['message'])
 
         return delegate(session_attributes, get_slots(intent_request))
     food_log.put_item(

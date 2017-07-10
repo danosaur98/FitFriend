@@ -196,6 +196,7 @@ def create_food(intent_request):
             {
                 'FoodName': food_name,
                 'Measurement': None,
+                'MeasurementType': None
             },
             {
                 'contentType': 'PlainText',
