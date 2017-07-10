@@ -94,7 +94,7 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def validate_create_food(food_name, serving, protein, carbohydrate, fat):
+def validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat):
     return build_validation_result(True, None, None)
 
 
@@ -104,6 +104,7 @@ def validate_create_food(food_name, serving, protein, carbohydrate, fat):
 def create_food(intent_request):
     food_name = get_slots(intent_request)["FoodName"]
     serving = get_slots(intent_request)["Serving"]
+    calorie = get_slots(intent_request)["Calorie"]
     protein = get_slots(intent_request)["Protein"]
     carbohydrate = get_slots(intent_request)["Carbohydrate"]
     fat = get_slots(intent_request)["Fat"]
@@ -122,7 +123,7 @@ def create_food(intent_request):
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
-            validation_result = validate_create_food(food_name, serving, protein, carbohydrate, fat)
+            validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
             if not validation_result['isValid']:
                 slots[validation_result['violatedSlot']] = None
                 return elicit_slot(intent_request['sessionAttributes'],
@@ -142,6 +143,17 @@ def create_food(intent_request):
                     {
                         'contentType': 'PlainText',
                         'content': 'How many grams in one serving?'
+                    }
+                )
+            elif not calorie:
+                return elicit_slot(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    slots,
+                    'Calorie',
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'How many calories in one serving?'
                     }
                 )
             elif not protein:
@@ -182,6 +194,7 @@ def create_food(intent_request):
         Item={
             "UserID": intent_request['userId'],
             "FoodName": food_name,
+            "Calorie": calorie,
             "Serving": serving,
             "Protein": protein,
             "Carbohydrate": carbohydrate,

@@ -95,10 +95,28 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
+def condense_measurement_type(measurement_type):
+    if measurement_type.lower in {'grams', 'gram', 'g'}:
+        return 'grams'
+    elif measurement_type.lower in {'servings', 'serving'}:
+        return 'servings'
+
+
+def calculate_nutrition(food_name, measurement, measurement_type, intent_request):
+    food_information = foods.get_item(
+        Key={
+            'UserID': intent_request['userId'],
+            'FoodName': food_name.lower()
+        }
+    )
+    if measurement_type == 'servings':
+        return {'calories': measurement * food_information['Item']['Calorie']}
+    elif measurement_type == ' grams':
+
 def is_valid_food(food_name, intent_request):
     response = foods.get_item(
         Key={
-            'UserID': 'universal',
+            'UserID': intent_request['userId'],
             'FoodName': food_name.lower()
         }
     )
@@ -138,7 +156,7 @@ def validate_record_meal(food_name, measurement, measurement_type, intent_reques
 def record_meal(intent_request):
     food_name = get_slots(intent_request)["FoodName"]
     measurement = get_slots(intent_request)["Measurement"]
-    measurement_type = get_slots(intent_request)["MeasurementType"]
+    measurement_type = condense_measurement_type(get_slots(intent_request)["MeasurementType"])
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
@@ -156,6 +174,7 @@ def record_meal(intent_request):
                     {
                         'FoodName': food_name,
                         'Serving': None,
+                        'Calorie': None,
                         'Protein': None,
                         'Carbohydrate': None,
                         'Fat': None
@@ -172,7 +191,11 @@ def record_meal(intent_request):
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
-
+        if food_name and measurement and measurement_type is not None:
+            session_attributes['RemainingCalories'] = remaining_nutrition(calories)
+            session_attributes['RemainingProtein'] = remaining_protein
+            session_attributes['RemainingCarbohydrate'] = remaining_carbohydrate
+            session_attributes['RemainingFat'] = remaining_fat
         return delegate(session_attributes, get_slots(intent_request))
     food_log.put_item(
         Item={
