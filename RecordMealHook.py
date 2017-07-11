@@ -6,6 +6,7 @@ import logging
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 food_log = dynamodb.Table('FoodLog')
 foods = dynamodb.Table('Foods')
+users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -96,10 +97,11 @@ def build_validation_result(is_valid, violated_slot, message_content):
 
 
 def condense_measurement_type(measurement_type):
-    if measurement_type.lower in {'grams', 'gram', 'g'}:
-        return 'grams'
-    elif measurement_type.lower in {'servings', 'serving'}:
-        return 'servings'
+    if measurement_type is not None:
+        if measurement_type.lower() in ['grams', 'gram', 'g']:
+            return 'grams'
+        elif measurement_type.lower() in ['servings', 'serving']:
+            return 'servings'
 
 
 def calculate_nutrition(food_name, measurement, measurement_type, intent_request):
@@ -109,29 +111,41 @@ def calculate_nutrition(food_name, measurement, measurement_type, intent_request
             'FoodName': food_name.lower()
         }
     )
-    calorie, protein, carbohydrate, fat = None
+    calorie, protein, carbohydrate, fat = None, None, None, None
     if measurement_type == 'servings':
-        calorie = int(measurement * food_information['Item']['Calorie'])
-        protein = int(measurement * food_information['Item']['Protein'])
-        carbohydrate = int(measurement * food_information['Item']['Carbohydrate'])
-        fat = int(measurement * food_information['Item']['Fat'])
+        calorie = int(measurement) * int(food_information['Item']['Calorie'])
+        protein = int(measurement) * int(food_information['Item']['Protein'])
+        carbohydrate = int(measurement) * int(food_information['Item']['Carbohydrate'])
+        fat = int(measurement) * int(food_information['Item']['Fat'])
     elif measurement_type == 'grams':
-        serving = measurement / food_information['Item']['Serving']
-        calorie = int(serving * food_information['Item']['Calorie'])
-        protein = int(serving * food_information['Item']['Protein'])
-        carbohydrate = int(serving * food_information['Item']['Carbohydrate'])
-        fat = int(serving * food_information['Item']['Fat'])
+        serving = int(measurement) / int(food_information['Item']['Serving'])
+        calorie = serving * int(food_information['Item']['Calorie'])
+        protein = serving * int(food_information['Item']['Protein'])
+        carbohydrate = serving * int(food_information['Item']['Carbohydrate'])
+        fat = serving * int(food_information['Item']['Fat'])
+    return {'calorie': int(calorie), 'protein': int(protein), 'carbohydrate': int(carbohydrate), 'fat': int(fat)}
+
+
+def get_remaining_nutrition(food_name, measurement, measurement_type, intent_request):
+    meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
+    user = users.get_item(
+        Key={
+            'user': intent_request['userId'],
+        }
+    )
+    today = 'test'+time.strftime("%m/%d/%Y")
+    calorie = user['Item']['dailyNutrientsRemaining'][today]['calorieRemaining'] - meal_nutrition['calorie']
+    protein = user['Item']['dailyNutrientsRemaining'][today]['proteinRemaining'] - meal_nutrition['protein']
+    carbohydrate = user['Item']['dailyNutrientsRemaining'][today]['carbohydrateRemaining'] - meal_nutrition[
+        'carbohydrate']
+    fat = user['Item']['dailyNutrientsRemaining'][today]['fatRemaining'] - meal_nutrition['fat']
     return {'calorie': calorie, 'protein': protein, 'carbohydrate': carbohydrate, 'fat': fat}
-
-
-def get_remaining_daily_nutrition(intent_request):
-    pass
 
 
 def is_valid_food(food_name, intent_request):
     response = foods.get_item(
         Key={
-            'UserID': intent_request['userId'],
+            'UserID': 'universal',
             'FoodName': food_name.lower()
         }
     )
@@ -207,31 +221,43 @@ def record_meal(intent_request):
                                validation_result['violatedSlot'],
                                validation_result['message'])
         if food_name and measurement and measurement_type is not None:
-            remaining_nutrition = get_remaining_daily_nutrition(intent_request)
-            meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
-
-            session_attributes['RemainingCalories'] = remaining_nutrition['calorie'] - meal_nutrition['calorie']
-            session_attributes['RemainingProtein'] = remaining_nutrition['protein'] - meal_nutrition['protein']
-            session_attributes['RemainingCarbohydrate'] = remaining_nutrition['carbohydrate'] - meal_nutrition[
-                'carbohydrate']
-            session_attributes['RemainingFat'] = remaining_nutrition['fat'] - meal_nutrition['fat']
+            remaining_nutrition = get_remaining_nutrition(food_name, measurement, measurement_type, intent_request)
+            session_attributes['RemainingCalories'] = remaining_nutrition['calorie']
+            session_attributes['RemainingProtein'] = remaining_nutrition['protein']
+            session_attributes['RemainingCarbohydrate'] = remaining_nutrition['carbohydrate']
+            session_attributes['RemainingFat'] = remaining_nutrition['fat']
         return delegate(session_attributes, get_slots(intent_request))
+    remaining_nutrition = get_remaining_nutrition(food_name, measurement, measurement_type, intent_request)
+
     food_log.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y"),
+            "Date": time.strftime("%m/%d/%Y %T"),
             "FoodName": food_name,
             "Measurement": measurement,
+            "MeasurementType": measurement_type
         }
     )
-    remaining_nutrition = get_remaining_daily_nutrition(intent_request)
-    meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
-
+    # map_key = "dailyNutrientsRemaining." + time.strftime("%m/%d/%Y")
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsRemaining.test07-10-2017 = :d",
+        ExpressionAttributeValues={
+            ':d': {
+                "calorieRemaining": remaining_nutrition['calorie'],
+                "proteinRemaining": remaining_nutrition['protein'],
+                "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
+                "fatRemaining": remaining_nutrition['fat']
+            }
+        }
+    )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': 'Yum!'
+                     'content': "Yum!"
                  })
 
 

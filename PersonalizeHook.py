@@ -110,6 +110,7 @@ def calculate_calories(gender, measurementsystem, weight, height, age, goal, act
 
 
 def calculate_macronutrient(goal, calories):
+    # 30 40 30 ratio between protein carbohydrate and fat
     if goal == 'lose weight':
         return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
                 'fat': int(.3 * calories / 9)}
@@ -201,8 +202,15 @@ def personalize(intent_request):
             "calorieGoal": calorie_goal,
             "proteinGoal": protein_goal,
             "carbohydrateGoal": carbohydrate_goal,
-            "fatGoal": fat_goal
-
+            "fatGoal": fat_goal,
+            "dailyNutrientsRemaining": {
+                time.strftime("%m/%d/%Y"): {
+                    "calorieRemaining": calorie_goal,
+                    "proteinRemaining": protein_goal,
+                    "carbohydrateRemaining": carbohydrate_goal,
+                    "fatRemaining": fat_goal
+                }
+            }
         }
     )
     return close(intent_request['sessionAttributes'],
