@@ -96,6 +96,17 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
+def is_valid_user(intent_request):
+    response = users.get_item(
+        Key={
+            'UserID': intent_request['userId'],
+        }
+    )
+    if 'Item' in response:
+        return True
+    return False
+
+
 def condense_measurement_type(measurement_type):
     if measurement_type is not None:
         if measurement_type.lower() in ['grams', 'gram', 'g']:
@@ -213,6 +224,13 @@ def record_meal(intent_request):
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
+        if not is_valid_user(intent_request):
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {
+                             'contentType': 'PlainText',
+                             'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
+                         })
         slots = get_slots(intent_request)
         validation_result = validate_record_meal(food_name, measurement, measurement_type, intent_request)
         if not validation_result['isValid']:

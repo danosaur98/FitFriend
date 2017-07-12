@@ -6,6 +6,7 @@ import logging
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 exercise_log = dynamodb.Table('ExerciseLog')
 exercises = dynamodb.Table('Exercises')
+users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -67,6 +68,17 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def is_valid_user(intent_request):
+    response = users.get_item(
+        Key={
+            'UserID': intent_request['userId'],
+        }
+    )
+    if 'Item' in response:
+        return True
+    return False
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -125,6 +137,13 @@ def record_weightlift(intent_request):
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
+        if not is_valid_user(intent_request):
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {
+                             'contentType': 'PlainText',
+                             'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
+                         })
         slots = get_slots(intent_request)
 
         validation_result = validate_record_weightlift(exercise_name, weight, reps, sets, intent_request)

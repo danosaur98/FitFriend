@@ -4,7 +4,7 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-table = dynamodb.Table('Users')
+users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -54,6 +54,17 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def is_valid_user(intent_request):
+    response = users.get_item(
+        Key={
+            'UserID': intent_request['userId'],
+        }
+    )
+    if 'Item' in response:
+        return True
+    return False
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -85,6 +96,13 @@ def set_own_goal(intent_request):
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
+        if not is_valid_user(intent_request):
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {
+                             'contentType': 'PlainText',
+                             'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
+                         })
         slots = get_slots(intent_request)
 
         validation_result = validate_set_own_goal(calorie_goal, protein_goal, carbohydrate_goal, fat_goal)
@@ -100,7 +118,7 @@ def set_own_goal(intent_request):
         return delegate(output_session_attributes, get_slots(intent_request))
 
     # call to a backend service.
-    table.update_item(
+    users.update_item(
         Key={
             'user': intent_request['userId']
         },
