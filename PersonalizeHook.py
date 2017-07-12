@@ -87,6 +87,33 @@ def get_goal_multiplier(goal):
         return 1
 
 
+def get_workout(goal):
+    if goal == 'gain mass':
+        return {"Monday": [],
+                "Tuesday": [],
+                "Wednesday": [],
+                "Thursday": [],
+                "Friday": [],
+                "Saturday": [],
+                "Sunday": []}
+    elif goal == 'lose weight':
+        return {"Monday": [],
+                "Tuesday": [],
+                "Wednesday": [],
+                "Thursday": [],
+                "Friday": [],
+                "Saturday": [],
+                "Sunday": []}
+    else:
+        return {"Monday": [],
+                "Tuesday": [],
+                "Wednesday": [],
+                "Thursday": [],
+                "Friday": [],
+                "Saturday": [],
+                "Sunday": []}
+
+
 def get_rmr(gender, measurementsystem, weight, height, age):
     # calculated based on the mifflin-st jeor formula
 
@@ -188,6 +215,7 @@ def personalize(intent_request):
     protein_goal = macronutrients['protein']
     carbohydrate_goal = macronutrients['carbohydrate']
     fat_goal = macronutrients['fat']
+    workout = get_workout(goal)
     table.put_item(
         Item={
             "user": intent_request['userId'],
@@ -203,12 +231,15 @@ def personalize(intent_request):
             "proteinGoal": protein_goal,
             "carbohydrateGoal": carbohydrate_goal,
             "fatGoal": fat_goal,
-            "dailyNutrientsRemaining": {
+            "workoutSchedule": workout,
+            "dailyNutrientsAndWorkouts": {
                 time.strftime("%m/%d/%Y"): {
                     "calorieRemaining": calorie_goal,
                     "proteinRemaining": protein_goal,
                     "carbohydrateRemaining": carbohydrate_goal,
                     "fatRemaining": fat_goal,
+                    "exercisesRemaining": workout[time.strftime('%A')],
+                    "violations": []
                 }
             },
         }

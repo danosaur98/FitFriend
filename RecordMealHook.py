@@ -145,11 +145,11 @@ def get_remaining_nutrition(food_name, measurement, measurement_type, intent_req
         }
     )
     today = time.strftime("%m/%d/%Y")
-    calorie = user['Item']['dailyNutrientsRemaining'][today]['calorie']['remaining'] - meal_nutrition['calorie']
-    protein = user['Item']['dailyNutrientsRemaining'][today]['protein']['remaining'] - meal_nutrition['protein']
-    carbohydrate = user['Item']['dailyNutrientsRemaining'][today]['carbohydrate']['remaining'] - meal_nutrition[
+    calorie = user['Item']['dailyNutrientsAndWorkouts'][today]['calorie']['remaining'] - meal_nutrition['calorie']
+    protein = user['Item']['dailyNutrientsAndWorkouts'][today]['protein']['remaining'] - meal_nutrition['protein']
+    carbohydrate = user['Item']['dailyNutrientsAndWorkouts'][today]['carbohydrate']['remaining'] - meal_nutrition[
         'carbohydrate']
-    fat = user['Item']['dailyNutrientsRemaining'][today]['fat']['remaining'] - meal_nutrition['fat']
+    fat = user['Item']['dailyNutrientsAndWorkouts'][today]['fat']['remaining'] - meal_nutrition['fat']
     return {'calorie': calorie, 'protein': protein, 'carbohydrate': carbohydrate, 'fat': fat}
 
 
@@ -264,7 +264,7 @@ def record_meal(intent_request):
         Key={
             'user': intent_request['userId']
         },
-        UpdateExpression="set dailyNutrientsRemaining.#day = :d",
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
         ExpressionAttributeValues={
             ':d': {
                 "calorieRemaining": remaining_nutrition['calorie'],
