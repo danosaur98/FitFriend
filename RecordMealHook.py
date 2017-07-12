@@ -126,6 +126,17 @@ def calculate_nutrition(food_name, measurement, measurement_type, intent_request
     return {'calorie': int(calorie), 'protein': int(protein), 'carbohydrate': int(carbohydrate), 'fat': int(fat)}
 
 
+def is_overflow(nutrition):
+    overflow = {}
+    for nutrient, value in nutrition.items():
+        if value < 0:
+            nutrition[nutrient] = - nutrition[nutrient]
+            overflow[nutrient] = True
+        else:
+            overflow[nutrient] = False
+    return overflow
+
+
 def get_remaining_nutrition(food_name, measurement, measurement_type, intent_request):
     meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
     user = users.get_item(
@@ -235,7 +246,11 @@ def record_meal(intent_request):
             "Date": time.strftime("%m/%d/%Y %T"),
             "FoodName": food_name,
             "Measurement": measurement,
-            "MeasurementType": measurement_type
+            "MeasurementType": measurement_type,
+            "calorieRemaining": remaining_nutrition['calorie'],
+            "proteinRemaining": remaining_nutrition['protein'],
+            "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
+            "fatRemaining": remaining_nutrition['fat']
         }
     )
     # map_key = "dailyNutrientsRemaining." + time.strftime("%m/%d/%Y")
@@ -253,7 +268,7 @@ def record_meal(intent_request):
             }
         },
         ExpressionAttributeNames={
-            '#time': time.strftime("%m/%d/%Y"),
+            '#day': time.strftime("%m/%d/%Y"),
         },
     )
     return close(intent_request['sessionAttributes'],
