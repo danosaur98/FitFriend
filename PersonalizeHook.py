@@ -205,12 +205,24 @@ def personalize(intent_request):
             "fatGoal": fat_goal,
             "dailyNutrientsRemaining": {
                 time.strftime("%m/%d/%Y"): {
-                    "calorieRemaining": calorie_goal,
-                    "proteinRemaining": protein_goal,
-                    "carbohydrateRemaining": carbohydrate_goal,
-                    "fatRemaining": fat_goal
+                    "calorie": {
+                        "remaining": calorie_goal,
+                        "overflow": False
+                    },
+                    "protein": {
+                        "remaining": protein_goal,
+                        "overflow": False
+                    },
+                    "carbohydrate": {
+                        "remaining": carbohydrate_goal,
+                        "overflow": False
+                    },
+                    "fat": {
+                        "remaining": fat_goal,
+                        "overflow": False
+                    }
                 }
-            }
+            },
         }
     )
     return close(intent_request['sessionAttributes'],

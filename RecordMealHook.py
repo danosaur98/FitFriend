@@ -130,11 +130,17 @@ def is_overflow(nutrition):
     overflow = {}
     for nutrient, value in nutrition.items():
         if value < 0:
-            nutrition[nutrient] = - nutrition[nutrient]
             overflow[nutrient] = True
         else:
             overflow[nutrient] = False
     return overflow
+
+
+def fix_overflow(nutrition):
+    for nutrient, value in nutrition.items():
+        if value < 0:
+            nutrition[nutrient] = - nutrition[nutrient]
+    return nutrition
 
 
 def get_remaining_nutrition(food_name, measurement, measurement_type, intent_request):
@@ -150,7 +156,11 @@ def get_remaining_nutrition(food_name, measurement, measurement_type, intent_req
     carbohydrate = user['Item']['dailyNutrientsRemaining'][today]['carbohydrateRemaining'] - meal_nutrition[
         'carbohydrate']
     fat = user['Item']['dailyNutrientsRemaining'][today]['fatRemaining'] - meal_nutrition['fat']
-    return {'calorie': calorie, 'protein': protein, 'carbohydrate': carbohydrate, 'fat': fat}
+    nutrition = {'calorie': calorie, 'protein': protein, 'carbohydrate': carbohydrate, 'fat': fat}
+    overflow = is_overflow(nutrition)
+    fix_overflow(nutrition)
+    nutrition['overflow'] = overflow
+    return nutrition
 
 
 def is_valid_food(food_name, intent_request):
@@ -239,7 +249,6 @@ def record_meal(intent_request):
             session_attributes['RemainingFat'] = remaining_nutrition['fat']
         return delegate(session_attributes, get_slots(intent_request))
     remaining_nutrition = get_remaining_nutrition(food_name, measurement, measurement_type, intent_request)
-
     food_log.put_item(
         Item={
             "UserID": intent_request['userId'],
@@ -250,7 +259,8 @@ def record_meal(intent_request):
             "calorieRemaining": remaining_nutrition['calorie'],
             "proteinRemaining": remaining_nutrition['protein'],
             "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
-            "fatRemaining": remaining_nutrition['fat']
+            "fatRemaining": remaining_nutrition['fat'],
+            "overflow": remaining_nutrition['overflow']
         }
     )
     # map_key = "dailyNutrientsRemaining." + time.strftime("%m/%d/%Y")
@@ -261,10 +271,22 @@ def record_meal(intent_request):
         UpdateExpression="set dailyNutrientsRemaining.#day = :d",
         ExpressionAttributeValues={
             ':d': {
-                "calorieRemaining": remaining_nutrition['calorie'],
-                "proteinRemaining": remaining_nutrition['protein'],
-                "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
-                "fatRemaining": remaining_nutrition['fat']
+                "calorie": {
+                    "remaining": remaining_nutrition['calorie'],
+                    "overflow": remaining_nutrition['overflow']['calorie']
+                },
+                "protein": {
+                    "remaining": remaining_nutrition['protein'],
+                    "overflow": remaining_nutrition['overflow']['protein']
+                },
+                "carbohydrate": {
+                    "remaining": remaining_nutrition['carbohydrate'],
+                    "overflow": remaining_nutrition['overflow']['carbohydrate']
+                },
+                "fat": {
+                    "remaining": remaining_nutrition['fat'],
+                    "overflow": remaining_nutrition['overflow']['fat']
+                }
             }
         },
         ExpressionAttributeNames={
