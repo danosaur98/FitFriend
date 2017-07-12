@@ -133,7 +133,7 @@ def get_remaining_nutrition(food_name, measurement, measurement_type, intent_req
             'user': intent_request['userId'],
         }
     )
-    today = 'test'+time.strftime("%m/%d/%Y")
+    today = time.strftime("%m/%d/%Y")
     calorie = user['Item']['dailyNutrientsRemaining'][today]['calorieRemaining'] - meal_nutrition['calorie']
     protein = user['Item']['dailyNutrientsRemaining'][today]['proteinRemaining'] - meal_nutrition['protein']
     carbohydrate = user['Item']['dailyNutrientsRemaining'][today]['carbohydrateRemaining'] - meal_nutrition[
@@ -243,7 +243,7 @@ def record_meal(intent_request):
         Key={
             'user': intent_request['userId']
         },
-        UpdateExpression="set dailyNutrientsRemaining.test07-10-2017 = :d",
+        UpdateExpression="set dailyNutrientsRemaining.#day = :d",
         ExpressionAttributeValues={
             ':d': {
                 "calorieRemaining": remaining_nutrition['calorie'],
@@ -251,7 +251,10 @@ def record_meal(intent_request):
                 "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
                 "fatRemaining": remaining_nutrition['fat']
             }
-        }
+        },
+        ExpressionAttributeNames={
+            '#time': time.strftime("%m/%d/%Y"),
+        },
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
