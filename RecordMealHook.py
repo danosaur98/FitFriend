@@ -96,15 +96,53 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_user(intent_request):
+def get_user(intent_request):
     response = users.get_item(
         Key={
-            'UserID': intent_request['userId'],
+            'user': intent_request['userId'],
         }
     )
-    if 'Item' in response:
+    return response
+
+
+def is_valid_user(user):
+    if 'Item' in user:
         return True
     return False
+
+
+def is_new_day(user):
+    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+        return True
+    return False
+
+
+def create_new_day(user, intent_request):
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+        ExpressionAttributeValues={
+            ':d': {
+                "calorieRemaining": user['Item']['calorieGoal'],
+                "proteinRemaining": user['Item']['proteinGoal'],
+                "carbohydrateRemaining": user['Item']['carbohydrateGoal'],
+                "fatRemaining": user['Item']['fatGoal'],
+                "exercisesRemaining": user['Item']['workout'][time.strftime('%A')],
+                "violations": [],
+                "isExcused": None
+            }
+        },
+        ExpressionAttributeNames={
+            '#day': time.strftime("%m/%d/%Y"),
+        },
+    )
+
+
+def get_previous_violations(user):
+    latest_day = sorted(list(user['Item']['dailyNutritionAndWorkouts'].keys()))[-1]
+    return user['Item']['dailyNutritionAndWorkouts'][latest_day]['violations']
 
 
 def condense_measurement_type(measurement_type):
@@ -197,19 +235,34 @@ def record_meal(intent_request):
     food_name = get_slots(intent_request)["FoodName"]
     measurement = get_slots(intent_request)["Measurement"]
     measurement_type = condense_measurement_type(get_slots(intent_request)["MeasurementType"])
+    user = get_user(intent_request)
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        if not is_valid_user(intent_request):
+        if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {
                              'contentType': 'PlainText',
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
+        if is_new_day(user):
+            create_new_day(user, intent_request)
+            if not len(get_previous_violations(user)) == 0:
+                return confirm_intent(
+                    session_attributes,
+                    'GiveExcuse',
+                    {
+                        'filler': 'slots'
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'Bro, do you have any valid excuse for what you did?'
+                    }
+                )
         slots = get_slots(intent_request)
         validation_result = validate_record_meal(food_name, measurement, measurement_type, intent_request)
         if not validation_result['isValid']:

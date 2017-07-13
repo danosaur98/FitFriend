@@ -81,13 +81,17 @@ def try_ex(func):
         return None
 
 
-def is_valid_user(intent_request):
+def get_user(intent_request):
     response = users.get_item(
         Key={
-            'UserID': intent_request['userId'],
+            'user': intent_request['userId'],
         }
     )
-    if 'Item' in response:
+    return response
+
+
+def is_valid_user(user):
+    if 'Item' in user:
         return True
     return False
 
@@ -125,6 +129,7 @@ def validate_create_exercise(name, muscle_group):
 def create_exercise(intent_request):
     exercise = get_slots(intent_request)["Exercise"]
     muscle_group = get_slots(intent_request)["MuscleGroup"]
+    user = get_user(intent_request)
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
@@ -132,14 +137,13 @@ def create_exercise(intent_request):
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        if not is_valid_user(intent_request):
+        if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {
                              'contentType': 'PlainText',
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
-            ''
         slots = get_slots(intent_request)
 
         if confirmation_status == 'Denied':

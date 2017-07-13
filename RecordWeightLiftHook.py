@@ -68,13 +68,17 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
-def is_valid_user(intent_request):
+def get_user(intent_request):
     response = users.get_item(
         Key={
-            'UserID': intent_request['userId'],
+            'user': intent_request['userId'],
         }
     )
-    if 'Item' in response:
+    return response
+
+
+def is_valid_user(user):
+    if 'Item' in user:
         return True
     return False
 
@@ -131,13 +135,14 @@ def record_weightlift(intent_request):
     weight = get_slots(intent_request)["Weight"]
     reps = get_slots(intent_request)["Reps"]
     sets = get_slots(intent_request)["Sets"]
+    user = get_user(intent_request)
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        if not is_valid_user(intent_request):
+        if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {

@@ -54,13 +54,17 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
-def is_valid_user(intent_request):
+def get_user(intent_request):
     response = users.get_item(
         Key={
-            'UserID': intent_request['userId'],
+            'user': intent_request['userId'],
         }
     )
-    if 'Item' in response:
+    return response
+
+
+def is_valid_user(user):
+    if 'Item' in user:
         return True
     return False
 
@@ -91,12 +95,13 @@ def set_own_goal(intent_request):
     protein_goal = get_slots(intent_request)["ProteinGoal"]
     carbohydrate_goal = get_slots(intent_request)["CarbohydrateGoal"]
     fat_goal = get_slots(intent_request)["FatGoal"]
+    user = get_user(intent_request)
     source = intent_request['invocationSource']
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        if not is_valid_user(intent_request):
+        if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {

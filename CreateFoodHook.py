@@ -81,13 +81,17 @@ def try_ex(func):
         return None
 
 
-def is_valid_user(intent_request):
+def get_user(intent_request):
     response = users.get_item(
         Key={
-            'UserID': intent_request['userId'],
+            'user': intent_request['userId'],
         }
     )
-    if 'Item' in response:
+    return response
+
+
+def is_valid_user(user):
+    if 'Item' in user:
         return True
     return False
 
@@ -120,6 +124,7 @@ def create_food(intent_request):
     protein = get_slots(intent_request)["Protein"]
     carbohydrate = get_slots(intent_request)["Carbohydrate"]
     fat = get_slots(intent_request)["Fat"]
+    user = get_user(intent_request)
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
@@ -127,7 +132,7 @@ def create_food(intent_request):
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        if not is_valid_user(intent_request):
+        if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {

@@ -239,7 +239,8 @@ def personalize(intent_request):
                     "carbohydrateRemaining": carbohydrate_goal,
                     "fatRemaining": fat_goal,
                     "exercisesRemaining": workout[time.strftime('%A')],
-                    "violations": []
+                    "violations": [],
+                    "isExcused": None,
                 }
             },
         }
