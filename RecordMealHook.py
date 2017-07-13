@@ -297,7 +297,6 @@ def record_meal(intent_request):
             session_attributes['RemainingProtein'] = remaining_nutrition['protein']
             session_attributes['RemainingCarbohydrate'] = remaining_nutrition['carbohydrate']
             session_attributes['RemainingFat'] = remaining_nutrition['fat']
-            session_attributes['Overflow'] = remaining_nutrition['overflow']
         return delegate(session_attributes, get_slots(intent_request))
     remaining_nutrition = get_remaining_nutrition(food_name, measurement, measurement_type, intent_request)
     food_log.put_item(
