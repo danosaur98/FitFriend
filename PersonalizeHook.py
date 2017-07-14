@@ -234,10 +234,12 @@ def personalize(intent_request):
             "workoutSchedule": workout,
             "dailyNutrientsAndWorkouts": {
                 time.strftime("%m/%d/%Y"): {
-                    "calorieRemaining": calorie_goal,
-                    "proteinRemaining": protein_goal,
-                    "carbohydrateRemaining": carbohydrate_goal,
-                    "fatRemaining": fat_goal,
+                    "nutritionRemaining": {
+                        'calorie': calorie_goal,
+                        'protein': protein_goal,
+                        'carbohydrate': carbohydrate_goal,
+                        'fat': fat_goal
+                    },
                     "exercisesRemaining": workout[time.strftime('%A')],
                     "violations": [],
                     "isExcused": None,

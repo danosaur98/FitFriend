@@ -125,13 +125,19 @@ def create_new_day(user, intent_request):
         UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
         ExpressionAttributeValues={
             ':d': {
-                "calorieRemaining": user['Item']['calorieGoal'],
-                "proteinRemaining": user['Item']['proteinGoal'],
-                "carbohydrateRemaining": user['Item']['carbohydrateGoal'],
-                "fatRemaining": user['Item']['fatGoal'],
-                "exercisesRemaining": user['Item']['workout'][time.strftime('%A')],
-                "violations": [],
-                "isExcused": None
+                "dailyNutrientsAndWorkouts": {
+                    time.strftime("%m/%d/%Y"): {
+                        "nutritionRemaining": {
+                            'calorie': user['Item']['calorieGoal'],
+                            'protein': user['Item']['proteinGoal'],
+                            'carbohydrate': user['Item']['carbohydrateGoal'],
+                            'fat': user['Item']['fatGoal']
+                        },
+                        "exercisesRemaining": user['Item']['workout'][time.strftime('%A')],
+                        "violations": [],
+                        "isExcused": None,
+                    }
+                },
             }
         },
         ExpressionAttributeNames={
@@ -175,20 +181,21 @@ def calculate_nutrition(food_name, measurement, measurement_type, intent_request
     return {'calorie': int(calorie), 'protein': int(protein), 'carbohydrate': int(carbohydrate), 'fat': int(fat)}
 
 
-def get_remaining_nutrition(food_name, measurement, measurement_type, intent_request):
-    meal_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
+def get_remaining_nutrition(food_nutrition, intent_request):
     user = users.get_item(
         Key={
             'user': intent_request['userId'],
         }
     )
     today = time.strftime("%m/%d/%Y")
-    calorie = user['Item']['dailyNutrientsAndWorkouts'][today]['calorie']['remaining'] - meal_nutrition['calorie']
-    protein = user['Item']['dailyNutrientsAndWorkouts'][today]['protein']['remaining'] - meal_nutrition['protein']
-    carbohydrate = user['Item']['dailyNutrientsAndWorkouts'][today]['carbohydrate']['remaining'] - meal_nutrition[
-        'carbohydrate']
-    fat = user['Item']['dailyNutrientsAndWorkouts'][today]['fat']['remaining'] - meal_nutrition['fat']
-    return {'calorie': calorie, 'protein': protein, 'carbohydrate': carbohydrate, 'fat': fat}
+    calorie = user['Item']['dailyNutrientsAndWorkouts'][today]['nutritionRemaining']['calorie'] - food_nutrition[
+        'calorie']
+    protein = user['Item']['dailyNutrientsAndWorkouts'][today]['nutritionRemaining']['protein'] - food_nutrition[
+        'protein']
+    carbohydrate = user['Item']['dailyNutrientsAndWorkouts'][today]['nutritionRemaining']['carbohydrate'] - \
+                   food_nutrition['carbohydrate']
+    fat = user['Item']['dailyNutrientsAndWorkouts'][today]['nutritionRemaining']['fat'] - food_nutrition['fat']
+    return {'calorie': int(calorie), 'protein': int(protein), 'carbohydrate': int(carbohydrate), 'fat': int(fat)}
 
 
 def is_valid_food(food_name, intent_request):
@@ -292,13 +299,29 @@ def record_meal(intent_request):
                                validation_result['violatedSlot'],
                                validation_result['message'])
         if food_name and measurement and measurement_type is not None:
-            remaining_nutrition = get_remaining_nutrition(food_name, measurement, measurement_type, intent_request)
-            session_attributes['RemainingCalories'] = remaining_nutrition['calorie']
-            session_attributes['RemainingProtein'] = remaining_nutrition['protein']
-            session_attributes['RemainingCarbohydrate'] = remaining_nutrition['carbohydrate']
-            session_attributes['RemainingFat'] = remaining_nutrition['fat']
+            food_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
+            remaining_nutrition = get_remaining_nutrition(food_nutrition, intent_request)
+            session_attributes['foodCalorie'] = food_nutrition['calorie']
+            session_attributes['foodProtein'] = food_nutrition['protein']
+            session_attributes['foodCarbohydrate'] = food_nutrition['carbohydrate']
+            session_attributes['foodFat'] = food_nutrition['fat']
+            session_attributes['calorieRemaining'] = remaining_nutrition['calorie']
+            session_attributes['proteinRemaining'] = remaining_nutrition['protein']
+            session_attributes['carbohydrateRemaining'] = remaining_nutrition['carbohydrate']
+            session_attributes['fatRemaining'] = remaining_nutrition['fat']
+        else:
+            try_ex(lambda: session_attributes.pop('foodCalorie'))
+            try_ex(lambda: session_attributes.pop('foodProtein'))
+            try_ex(lambda: session_attributes.pop('foodCarbohydrate'))
+            try_ex(lambda: session_attributes.pop('foodFat'))
+            try_ex(lambda: session_attributes.pop('calorieRemaining'))
+            try_ex(lambda: session_attributes.pop('proteinRemaining'))
+            try_ex(lambda: session_attributes.pop('carbohydrateRemaining'))
+            try_ex(lambda: session_attributes.pop('fatRemaining'))
+
         return delegate(session_attributes, get_slots(intent_request))
-    remaining_nutrition = get_remaining_nutrition(food_name, measurement, measurement_type, intent_request)
+    food_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
+    remaining_nutrition = get_remaining_nutrition(food_nutrition, intent_request)
     food_log.put_item(
         Item={
             "UserID": intent_request['userId'],
@@ -306,10 +329,8 @@ def record_meal(intent_request):
             "FoodName": food_name,
             "Measurement": measurement,
             "MeasurementType": measurement_type,
-            "calorieRemaining": remaining_nutrition['calorie'],
-            "proteinRemaining": remaining_nutrition['protein'],
-            "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
-            "fatRemaining": remaining_nutrition['fat'],
+            "FoodNutrition": food_nutrition,
+            "NutritionRemaining": remaining_nutrition
         }
     )
     users.update_item(
@@ -319,10 +340,7 @@ def record_meal(intent_request):
         UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
         ExpressionAttributeValues={
             ':d': {
-                "calorieRemaining": remaining_nutrition['calorie'],
-                "proteinRemaining": remaining_nutrition['protein'],
-                "carbohydrateRemaining": remaining_nutrition['carbohydrate'],
-                "fatRemaining": remaining_nutrition['fat'],
+                "nutritionRemaining": remaining_nutrition
             }
         },
         ExpressionAttributeNames={
