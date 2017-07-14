@@ -111,6 +111,44 @@ def is_valid_user(user):
     return False
 
 
+def find_violations(remaining_nutrition, user):
+    violations = []
+    for nutrient, amount in remaining_nutrition.items():
+        if nutrient == 'calorie':
+            if amount < 0:
+                violations.append(nutrient)
+        else:
+            if amount < -int(0.1 * user['Item']['nutrientGoal'][nutrient]):
+                violations.append(nutrient)
+    return violations
+
+
+def generate_violation_message(remaining_nutrition, user):
+    violations = find_violations(remaining_nutrition, user)
+    if len(violations) == 0:
+        return ""
+    elif len(violations) == 1:
+        if violations[0] == 'calorie':
+            return "You're going over your " + violations[0] + "limit!"
+        else:
+            return "You're going over 10% of your " + violations[0] + "limit!"
+    elif len(violations) == 2:
+        if violations[0] == 'calorie':
+            return "You're going over your " + violations[0] + "limit and over 10% of your " + violations[1] + "limit!"
+        else:
+            return "You're going over 10% of your " + violations[0] + "and " + violations[1] + "limits!"
+    elif len(violations) == 3:
+        if violations[0] == 'calorie':
+            return "You're going over your " + violations[0] + "limit and over 10% of your " + violations[1] + "and " + \
+                   violations[2] + "limits!"
+        else:
+            return "You're going over 10% of your " + violations[0] + ", " + violations[1] + "and " + violations[
+                2] + "limits!"
+    elif len(violations) == 4:
+        return "You're going over your " + violations[0] + "limit and over 10% of your " + violations[1] + ", " + \
+               violations[2] + "and " + violations[3] + "limits!"
+
+
 def is_new_day(user):
     if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
         return True
@@ -309,6 +347,7 @@ def record_meal(intent_request):
             session_attributes['proteinRemaining'] = remaining_nutrition['protein']
             session_attributes['carbohydrateRemaining'] = remaining_nutrition['carbohydrate']
             session_attributes['fatRemaining'] = remaining_nutrition['fat']
+            session_attributes['violationWarning'] = generate_violation_message(remaining_nutrition, user)
         else:
             try_ex(lambda: session_attributes.pop('foodCalorie'))
             try_ex(lambda: session_attributes.pop('foodProtein'))
@@ -318,6 +357,7 @@ def record_meal(intent_request):
             try_ex(lambda: session_attributes.pop('proteinRemaining'))
             try_ex(lambda: session_attributes.pop('carbohydrateRemaining'))
             try_ex(lambda: session_attributes.pop('fatRemaining'))
+            try_ex(lambda: session_attributes.pop('violationWarning'))
 
         return delegate(session_attributes, get_slots(intent_request))
     food_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)

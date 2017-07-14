@@ -227,10 +227,12 @@ def personalize(intent_request):
             "weight": weight,
             "goal": goal,
             "activity": activity,
-            "calorieGoal": calorie_goal,
-            "proteinGoal": protein_goal,
-            "carbohydrateGoal": carbohydrate_goal,
-            "fatGoal": fat_goal,
+            "nutrientGoal": {
+                'calorie': calorie_goal,
+                'protein': protein_goal,
+                'carbohydrate': carbohydrate_goal,
+                'fat': fat_goal
+            },
             "workoutSchedule": workout,
             "dailyNutrientsAndWorkouts": {
                 time.strftime("%m/%d/%Y"): {
