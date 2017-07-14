@@ -1,12 +1,19 @@
+"""
+This sample demonstrates an implementation of the Lex Code Hook Interface
+in order to serve a sample bot which manages orders for flowers.
+Bot, Intent, and Slot models which are compatible with this sample can be found in the Lex Console
+as part of the 'OrderFlowers' template.
+
+For instructions on how to set up and test this bot, as well as additional samples,
+visit the Lex Getting Started documentation http://docs.aws.amazon.com/lex/latest/dg/getting-started.html.
+"""
 import boto3
 import time
 import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-exercise_log = dynamodb.Table('ExerciseLog')
-exercises = dynamodb.Table('Exercises')
-users = dynamodb.Table('Users')
+excuses = dynamodb.Table('Excuses')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -68,21 +75,6 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
-def get_user(intent_request):
-    response = users.get_item(
-        Key={
-            'user': intent_request['userId'],
-        }
-    )
-    return response
-
-
-def is_valid_user(user):
-    if 'Item' in user:
-        return True
-    return False
-
-
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -97,62 +89,83 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_run(distance, duration, intent_request):
-    return True
-
-
-def validate_record_run(distance, duration, intent_request):
+def validate_give_excuse(excuse, violation, source_intent):
     return build_validation_result(True, None, None)
 
 
 """ --- Functions that control the bot's behavior --- """
 
 
-def record_run(intent_request):
-    distance = get_slots(intent_request)["Distance"]
-    duration = get_slots(intent_request)["Duration"]
-    user = get_user(intent_request)
+def give_excuse(intent_request):
+    """
+    Performs dialog management and fulfillment for ordering flowers.
+    Beyond fulfillment, the implementation of this intent demonstrates the use of the elicitSlot dialog action
+    in slot validation and re-prompting.
+    """
+
+    excuse = get_slots(intent_request)["Excuse"]
+    violation = get_slots(intent_request)["Violation"]
     source = intent_request['invocationSource']
-    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    session_attributes = intent_request['sessionAttributes'] if intent_request[
+                                                                    'sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        if not is_valid_user(user):
+        slots = get_slots(intent_request)
+        if confirmation_status == 'Denied':
+            excuses.put_item(
+                Item={
+                    "UserID": intent_request['userId'],
+                    "Date": time.strftime("%m/%d/%Y %T"),
+                    "Excuse": 'I am weak and I succumb to temptations easily.',
+                    "Violation": violation,
+                }
+            )
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
-                         {
-                             'contentType': 'PlainText',
-                             'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
-                         })
-            # Perform basic validation on the supplied input slots.
-            # Use the elicitSlot dialog action to re-prompt for the first violation detected.
-        slots = get_slots(intent_request)
-
-        validation_result = validate_record_run(distance, distance, intent_request)
-        if not validation_result['isValid']:
+                         {'contentType': 'PlainText',
+                          'content': 'Try not to do it again!'})
+        if confirmation_status == 'Denied':
+            return confirm_intent(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                {
+                    'Excuse': None,
+                    'Violation': violation
+                },
+                {
+                    'contentType': 'PlainText',
+                    'content': 'Stop avoiding the question punk and tell me if you have a valid excuse or not.'
+                }
+            )
+        if confirmation_status == 'Confirmed':
+            validation_result = validate_give_excuse(excuse, violation, intent_request)
+            if not validation_result['isValid']:
                 slots[validation_result['violatedSlot']] = None
                 return elicit_slot(intent_request['sessionAttributes'],
                                    intent_request['currentIntent']['name'],
                                    slots,
                                    validation_result['violatedSlot'],
                                    validation_result['message'])
+
         return delegate(session_attributes, get_slots(intent_request))
-    exercise_log.put_item(
+
+    # Order the flowers, and rely on the goodbye message of the bot to define the message to the end user.
+    # In a real bot, this would likely involve a call to a backend service.
+    excuses.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y"),
-            "ExerciseName": "run",
-            "Distance": distance,
-            "Duration": duration,
+            "Date": time.strftime("%m/%d/%Y %T"),
+            "Excuse": excuse,
+            "Violation": violation,
         }
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
-                 {
-                     'contentType': 'PlainText',
-                     'content': 'Keep going!'
-                 })
+                 {'contentType': 'PlainText',
+                  'content': 'Try not to do it again!'})
 
 
 """ --- Intents --- """
@@ -169,8 +182,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'RecordRun':
-        return record_run(intent_request)
+    if intent_name == 'GiveExcuse':
+        return give_excuse(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

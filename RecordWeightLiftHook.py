@@ -174,7 +174,7 @@ def record_weightlift(intent_request):
     exercise_log.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y"),
+            "Date": time.strftime("%m/%d/%Y %T"),
             "ExerciseName": exercise_name,
             "Weight": weight,
             "Reps": reps,
