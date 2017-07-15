@@ -244,7 +244,6 @@ def personalize(intent_request):
                     },
                     "exercisesRemaining": workout[time.strftime('%A')],
                     "violations": [],
-                    "isExcused": None,
                 }
             },
         }

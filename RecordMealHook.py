@@ -134,12 +134,14 @@ def generate_violation_message(remaining_nutrition, user):
             return "You're going over 10% of your " + violations[0] + " limit!"
     elif len(violations) == 2:
         if violations[0] == 'calorie':
-            return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[1] + " limit!"
+            return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[
+                1] + " limit!"
         else:
             return "You're going over 10% of your " + violations[0] + " and " + violations[1] + " limits!"
     elif len(violations) == 3:
         if violations[0] == 'calorie':
-            return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[1] + " and " + \
+            return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[
+                1] + " and " + \
                    violations[2] + " limits!"
         else:
             return "You're going over 10% of your " + violations[0] + ", " + violations[1] + " and " + violations[
@@ -313,7 +315,7 @@ def record_meal(intent_request):
                     },
                     {
                         'contentType': 'PlainText',
-                        'content': 'Do you have a valid excuse for why you went over your limits?'
+                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday?'
                     }
                 )
         slots = get_slots(intent_request)
@@ -397,6 +399,24 @@ def record_meal(intent_request):
     )
     violations = find_violations(remaining_nutrition, user)
     if len(violations) != 0:
+        current_violations = user['Item']['violations']
+        for item in violations:
+            if item not in current_violations:
+                current_violations.append(item)
+        users.update_item(
+            Key={
+                'user': intent_request['userId']
+            },
+            UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+            ExpressionAttributeValues={
+                ':d': {
+                    "violations": current_violations
+                }
+            },
+            ExpressionAttributeNames={
+                '#day': time.strftime("%m/%d/%Y"),
+            },
+        )
         return confirm_intent(
             session_attributes,
             "GiveExcuse",
