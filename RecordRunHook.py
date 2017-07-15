@@ -96,7 +96,7 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def validate_record_run(distance, duration, intent_request):
+def validate_record_run(distance, duration, incline, intent_request):
     return build_validation_result(True, None, None)
 
 
@@ -106,6 +106,7 @@ def validate_record_run(distance, duration, intent_request):
 def record_run(intent_request):
     distance = get_slots(intent_request)["Distance"]
     duration = get_slots(intent_request)["Duration"]
+    incline = get_slots(intent_request)["Incline"]
     user = get_user(intent_request)
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
@@ -122,7 +123,7 @@ def record_run(intent_request):
                          })
         slots = get_slots(intent_request)
 
-        validation_result = validate_record_run(distance, duration, intent_request)
+        validation_result = validate_record_run(distance, duration, incline, intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -138,6 +139,7 @@ def record_run(intent_request):
             "ExerciseName": "run",
             "Distance": distance,
             "Duration": duration,
+            "Incline": incline,
         }
     )
     return close(session_attributes,
