@@ -149,6 +149,13 @@ def generate_violation_message(remaining_nutrition, user):
                violations[2] + "and " + violations[3] + "limits!"
 
 
+def generate_violation_string(violation):
+    str = ""
+    for word in violation:
+        str += word + " "
+    return str
+
+
 def is_new_day(user):
     if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
         return True

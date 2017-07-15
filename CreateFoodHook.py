@@ -116,17 +116,6 @@ def is_valid_number(nutrient):
 
 
 def validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat):
-    '''if serving:
-        if not is_valid_number(serving):
-            return build_validation_result(False, "Serving", "How many grams in one serving?")
-    if calorie and not is_valid_number(calorie):
-        return build_validation_result(False, "Calorie", "How many calories in one serving?")
-    if protein and not is_valid_number(protein):
-        return build_validation_result(False, "Protein", "How many grams of protein in one serving?")
-    if carbohydrate and not is_valid_number(carbohydrate):
-        return build_validation_result(False, "Carbohydrate", "How many grams of carbohydrates in one serving?")
-    if fat and is_valid_number(fat):
-        return build_validation_result(False, "Fat", "How many grams of fat in one serving?")'''
     return build_validation_result(True, None, None)
 
 
@@ -144,8 +133,6 @@ def create_food(intent_request):
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-    confirmation_context = try_ex(lambda: session_attributes['confirmationContext'])
-
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
@@ -168,7 +155,6 @@ def create_food(intent_request):
                 validation_result['message']
             )
         if confirmation_status == 'Denied':
-            try_ex(lambda: session_attributes.pop('confirmationContext'))
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {'contentType': 'PlainText',
@@ -207,7 +193,6 @@ def create_food(intent_request):
             # Otherwise, let native DM rules determine how to elicit for slots and/or drive confirmation.
             return delegate(session_attributes, intent_request['currentIntent']['slots'])
         if confirmation_status == 'Confirmed':
-            try_ex(lambda: session_attributes.pop('confirmationContext'))
             session_attributes['chainRecordMeal'] = True
             if not serving:
                 return elicit_slot(
