@@ -175,29 +175,6 @@ def create_food(intent_request):
                 return elicit_slot(
                     session_attributes,
                     intent_request['currentIntent']['name'],
-                    {
-                        'FoodName': food_name,
-                        'Serving': None,
-                        'Calorie': None,
-                        'Protein': None,
-                        'Carbohydrate': None,
-                        'Fat': None
-                    },
-                    {
-                        'contentType': 'PlainText',
-                        'content': '{} is not recognized as one of your foods. Would '
-                                   'you like to add it?'.format(food_name)
-                    }
-                )
-
-            # Otherwise, let native DM rules determine how to elicit for slots and/or drive confirmation.
-            return delegate(session_attributes, intent_request['currentIntent']['slots'])
-        if confirmation_status == 'Confirmed':
-            session_attributes['chainRecordMeal'] = True
-            if not serving:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
                     intent_request['currentIntent']['slots'],
                     'Serving',
                     {
