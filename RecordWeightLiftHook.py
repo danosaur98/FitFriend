@@ -154,23 +154,26 @@ def record_weightlift(intent_request):
         validation_result = validate_record_weightlift(exercise_name, weight, reps, sets, intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
+            if not is_valid_exercise(exercise_name, intent_request):
+                return confirm_intent(
+                    session_attributes,
+                    'CreateExercise',
+                    {
+                        'Exercise': exercise_name,
+                        'MuscleGroup': None
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': '{} is not recognized as one of your foods. Would '
+                                   'you like to add it?'.format(exercise_name)
 
-            return confirm_intent(
-                session_attributes,
-                'CreateExercise',
-                {
-                    'Exercise': exercise_name,
-                    'MuscleGroup': None
-                },
-                {
-                    'contentType': 'PlainText',
-                    'content': '{} is not recognized as one of your exercises. Would '
-                               'you like to add it?'.format(exercise_name)
-
-                }
-            )
-
-        return delegate(session_attributes, get_slots(intent_request))
+                    }
+                )
+            return elicit_slot(intent_request['sessionAttributes'],
+                               intent_request['currentIntent']['name'],
+                               slots,
+                               validation_result['violatedSlot'],
+                               validation_result['message'])
     exercise_log.put_item(
         Item={
             "UserID": intent_request['userId'],

@@ -110,7 +110,23 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
+def is_valid_number(nutrient):
+    if type(nutrient) == 'int':
+        return True
+
+
 def validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat):
+    '''if serving:
+        if not is_valid_number(serving):
+            return build_validation_result(False, "Serving", "How many grams in one serving?")
+    if calorie and not is_valid_number(calorie):
+        return build_validation_result(False, "Calorie", "How many calories in one serving?")
+    if protein and not is_valid_number(protein):
+        return build_validation_result(False, "Protein", "How many grams of protein in one serving?")
+    if carbohydrate and not is_valid_number(carbohydrate):
+        return build_validation_result(False, "Carbohydrate", "How many grams of carbohydrates in one serving?")
+    if fat and is_valid_number(fat):
+        return build_validation_result(False, "Fat", "How many grams of fat in one serving?")'''
     return build_validation_result(True, None, None)
 
 
@@ -128,6 +144,7 @@ def create_food(intent_request):
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    confirmation_context = try_ex(lambda: session_attributes['confirmationContext'])
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -140,59 +157,66 @@ def create_food(intent_request):
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
         slots = get_slots(intent_request)
-
+        validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
+        if not validation_result['isValid']:
+            slots[validation_result['violatedSlot']] = None
+            return elicit_slot(
+                session_attributes,
+                intent_request['currentIntent']['name'],
+                slots,
+                validation_result['violatedSlot'],
+                validation_result['message']
+            )
         if confirmation_status == 'Denied':
+            try_ex(lambda: session_attributes.pop('confirmationContext'))
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
-            return confirm_intent(
-                session_attributes,
-                intent_request['currentIntent']['name'],
-                {
-                    'FoodName': food_name,
-                    'Serving': None,
-                    'Calorie': None,
-                    'Protein': None,
-                    'Carbohydrate': None,
-                    'Fat': None
-                },
-                {
-                    'contentType': 'PlainText',
-                    'content': '{} is not recognized as one of your foods. Would '
-                               'you like to add it?'.format(food_name)
-                }
-            )
+            # If we are currently auto-populating but have not gotten confirmation, keep requesting for confirmation.
+            if (not food_name and not serving and not calorie and not protein and not carbohydrate and not fat) \
+                    or confirmation_context == 'AutoPopulate':
+                session_attributes['confirmationContext'] = 'AutoPopulate'
+                return confirm_intent(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    {
+                        'FoodName': food_name,
+                        'Serving': None,
+                        'Calorie': None,
+                        'Protein': None,
+                        'Carbohydrate': None,
+                        'Fat': None
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': '{} is not recognized as one of your foods. Would '
+                                   'you like to add it?'.format(food_name)
+                    }
+                )
+
+            # Otherwise, let native DM rules determine how to elicit for slots and/or drive confirmation.
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
         if confirmation_status == 'Confirmed':
+            try_ex(lambda: session_attributes.pop('confirmationContext'))
             session_attributes['chainRecordMeal'] = True
             if not serving:
                 return elicit_slot(
                     session_attributes,
                     intent_request['currentIntent']['name'],
-                    slots,
+                    intent_request['currentIntent']['slots'],
                     'Serving',
                     {
                         'contentType': 'PlainText',
                         'content': 'How many grams in one serving?'
                     }
                 )
-            elif not calorie:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    slots,
-                    'Calorie',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'How many calories in one serving?'
-                    }
-                )
             elif not protein:
                 return elicit_slot(
                     session_attributes,
                     intent_request['currentIntent']['name'],
-                    slots,
+                    intent_request['currentIntent']['slots'],
                     'Protein',
                     {
                         'contentType': 'PlainText',
@@ -203,7 +227,7 @@ def create_food(intent_request):
                 return elicit_slot(
                     session_attributes,
                     intent_request['currentIntent']['name'],
-                    slots,
+                    intent_request['currentIntent']['slots'],
                     'Carbohydrate',
                     {
                         'contentType': 'PlainText',
@@ -214,13 +238,14 @@ def create_food(intent_request):
                 return elicit_slot(
                     session_attributes,
                     intent_request['currentIntent']['name'],
-                    slots,
+                    intent_request['currentIntent']['slots'],
                     'Fat',
                     {
                         'contentType': 'PlainText',
                         'content': 'How many grams of fat in one serving?'
                     }
                 )
+            return delegate(session_attributes, intent_request['currentIntent']['slots'])
 
     foods.put_item(
         Item={

@@ -152,6 +152,33 @@ def create_exercise(intent_request):
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
+            if try_ex(lambda: session_attributes['chainRecordMeal']) is True:
+                return confirm_intent(
+                    session_attributes,
+                    intent_request['currentIntent']['name'],
+                    {
+                        'Exercise': exercise,
+                        'MuscleGroup': None
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': '{} is not recognized as one of your exercises. Would '
+                                   'you like to add it?'.format(exercise)
+                    }
+                )
+            else:
+                validation_result = validate_create_exercise(exercise, muscle_group)
+                if not validation_result['isValid']:
+                    slots[validation_result['violatedSlot']] = None
+                    return elicit_slot(intent_request['sessionAttributes'],
+                                       intent_request['currentIntent']['name'],
+                                       slots,
+                                       validation_result['violatedSlot'],
+                                       validation_result['message'])
+
+            return delegate(session_attributes, get_slots(intent_request))
+        if confirmation_status == 'Confirmed':
+            session_attributes['chainRecordWeightLift'] = True
             validation_result = validate_create_exercise(exercise, muscle_group)
             if not validation_result['isValid']:
                 slots[validation_result['violatedSlot']] = None
@@ -160,21 +187,8 @@ def create_exercise(intent_request):
                                    slots,
                                    validation_result['violatedSlot'],
                                    validation_result['message'])
-            return delegate(session_attributes, get_slots(intent_request))
-        if confirmation_status == 'Confirmed':
-            session_attributes['chainRecordWeightLift'] = True
-            if not muscle_group:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    slots,
-                    'MuscleGroup',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'Does {} primarily work the arms, back, chest, core, '
-                                   'shoulder, or legs?'.format(exercise)
-                    }
-                )
+
+        return delegate(session_attributes, get_slots(intent_request))
 
     exercises.put_item(
         Item={
