@@ -118,7 +118,7 @@ def find_violations(remaining_nutrition, user):
             if amount < 0:
                 violations.append(nutrient)
         else:
-            if amount < -int(0.1 * int(user['Item']['nutrientGoal'][nutrient])):
+            if amount < -int(0.1 * user['Item']['nutrientGoal'][nutrient]):
                 violations.append(nutrient)
     return violations
 
@@ -129,26 +129,24 @@ def generate_violation_message(remaining_nutrition, user):
         return ""
     elif len(violations) == 1:
         if violations[0] == 'calorie':
-            return "You're going over your " + violations[0] + " limit!"
+            return "You're going over your " + violations[0] + "limit!"
         else:
-            return "You're going over 10% of your " + violations[0] + " limit!"
+            return "You're going over 10% of your " + violations[0] + "limit!"
     elif len(violations) == 2:
         if violations[0] == 'calorie':
-            return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[
-                1] + " limit!"
+            return "You're going over your " + violations[0] + "limit and over 10% of your " + violations[1] + "limit!"
         else:
-            return "You're going over 10% of your " + violations[0] + " and " + violations[1] + " limits!"
+            return "You're going over 10% of your " + violations[0] + "and " + violations[1] + "limits!"
     elif len(violations) == 3:
         if violations[0] == 'calorie':
-            return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[
-                1] + " and " + \
-                   violations[2] + " limits!"
+            return "You're going over your " + violations[0] + "limit and over 10% of your " + violations[1] + "and " + \
+                   violations[2] + "limits!"
         else:
-            return "You're going over 10% of your " + violations[0] + ", " + violations[1] + " and " + violations[
-                2] + " limits!"
+            return "You're going over 10% of your " + violations[0] + ", " + violations[1] + "and " + violations[
+                2] + "limits!"
     elif len(violations) == 4:
-        return "You're going over your " + violations[0] + " limit and over 10% of your " + violations[1] + ", " + \
-               violations[2] + " and " + violations[3] + " limits!"
+        return "You're going over your " + violations[0] + "limit and over 10% of your " + violations[1] + ", " + \
+               violations[2] + "and " + violations[3] + "limits!"
 
 
 def is_new_day(user):
@@ -389,27 +387,12 @@ def record_meal(intent_request):
             '#day': time.strftime("%m/%d/%Y"),
         },
     )
-    violations = find_violations(remaining_nutrition, user)
-    if len(violations) != 0:
-        return confirm_intent(
-            session_attributes,
-            "GiveExcuse",
-            {
-                'Excuse': None,
-                'Violation': violations
-            },
-            {
-                'contentType': 'PlainText',
-                'content': 'Do you have a valid excuse for why you went over your limits?'
-            }
-        )
-    else:
-        return close(intent_request['sessionAttributes'],
-                     'Fulfilled',
-                     {
-                         'contentType': 'PlainText',
-                         'content': "Sounds yummy! :)"
-                     })
+    return close(intent_request['sessionAttributes'],
+                 'Fulfilled',
+                 {
+                     'contentType': 'PlainText',
+                     'content': "Yum!"
+                 })
 
 
 """ --- Intents --- """

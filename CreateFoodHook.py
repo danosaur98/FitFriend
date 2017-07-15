@@ -174,11 +174,19 @@ def create_food(intent_request):
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
-            # If we are currently auto-populating but have not gotten confirmation, keep requesting for confirmation.
-            if (not food_name and not serving and not calorie and not protein and not carbohydrate and not fat) \
-                    or confirmation_context == 'AutoPopulate':
-                session_attributes['confirmationContext'] = 'AutoPopulate'
-                return confirm_intent(
+            validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
+            if not validation_result['isValid']:
+                slots[validation_result['violatedSlot']] = None
+                return elicit_slot(intent_request['sessionAttributes'],
+                                   intent_request['currentIntent']['name'],
+                                   slots,
+                                   validation_result['violatedSlot'],
+                                   validation_result['message'])
+            return delegate(session_attributes, get_slots(intent_request))
+        if confirmation_status == 'Confirmed':
+            session_attributes['chainRecordMeal'] = True
+            if not serving:
+                return elicit_slot(
                     session_attributes,
                     intent_request['currentIntent']['name'],
                     {

@@ -5,7 +5,6 @@ import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 exercise_log = dynamodb.Table('ExerciseLog')
-exercises = dynamodb.Table('Exercises')
 users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -97,10 +96,6 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_run(distance, duration, intent_request):
-    return True
-
-
 def validate_record_run(distance, duration, intent_request):
     return build_validation_result(True, None, None)
 
@@ -125,18 +120,16 @@ def record_run(intent_request):
                              'contentType': 'PlainText',
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
-            # Perform basic validation on the supplied input slots.
-            # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
-        validation_result = validate_record_run(distance, distance, intent_request)
+        validation_result = validate_record_run(distance, duration, intent_request)
         if not validation_result['isValid']:
-                slots[validation_result['violatedSlot']] = None
-                return elicit_slot(intent_request['sessionAttributes'],
-                                   intent_request['currentIntent']['name'],
-                                   slots,
-                                   validation_result['violatedSlot'],
-                                   validation_result['message'])
+            slots[validation_result['violatedSlot']] = None
+            return elicit_slot(intent_request['sessionAttributes'],
+                               intent_request['currentIntent']['name'],
+                               slots,
+                               validation_result['violatedSlot'],
+                               validation_result['message'])
         return delegate(session_attributes, get_slots(intent_request))
     exercise_log.put_item(
         Item={
@@ -147,7 +140,7 @@ def record_run(intent_request):
             "Duration": duration,
         }
     )
-    return close(intent_request['sessionAttributes'],
+    return close(session_attributes,
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
