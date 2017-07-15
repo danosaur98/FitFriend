@@ -142,7 +142,7 @@ def calculate_macronutrient(goal, calories):
         return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
                 'fat': int(.3 * calories / 9)}
     elif goal == 'gain mass':
-        return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.5 * calories / 4),
+        return {'protein': int(.4 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
                 'fat': int(.2 * calories / 9)}
     else:
         return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
