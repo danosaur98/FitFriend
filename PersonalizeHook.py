@@ -89,29 +89,29 @@ def get_goal_multiplier(goal):
 
 def get_workout(goal):
     if goal == 'gain mass':
-        return {"Monday": [],
-                "Tuesday": [],
-                "Wednesday": [],
-                "Thursday": [],
-                "Friday": [],
-                "Saturday": [],
-                "Sunday": []}
+        return {"Monday": ['bench press', 'fly', 'bicep curl', 'tricep extension'],
+                "Tuesday": ['run'],
+                "Wednesday": ['deadlift', 'bent over row', 'pull up'],
+                "Thursday": ['rest'],
+                "Friday": ['overhead press', 'shoulder press'],
+                "Saturday": ['rest'],
+                "Sunday": ['squat', 'step up', 'leg press']}
     elif goal == 'lose weight':
-        return {"Monday": [],
-                "Tuesday": [],
-                "Wednesday": [],
-                "Thursday": [],
-                "Friday": [],
-                "Saturday": [],
-                "Sunday": []}
+        return {"Monday": ['run'],
+                "Tuesday": ['bench press', 'fly', 'bicep curl', 'tricep extension'],
+                "Wednesday": ['rest'],
+                "Thursday": ['run'],
+                "Friday": ['rest'],
+                "Saturday": ['run'],
+                "Sunday": ['rest']}
     else:
-        return {"Monday": [],
-                "Tuesday": [],
-                "Wednesday": [],
-                "Thursday": [],
-                "Friday": [],
-                "Saturday": [],
-                "Sunday": []}
+        return {"Monday": ['bench press', 'fly', 'bicep curl', 'tricep extension'],
+                "Tuesday": ['run'],
+                "Wednesday": ['rest'],
+                "Thursday": ['deadlift', 'bent over row', 'pull up'],
+                "Friday": ['rest'],
+                "Saturday": ['run'],
+                "Sunday": ['rest']}
 
 
 def get_rmr(gender, measurementsystem, weight, height, age):
@@ -137,16 +137,28 @@ def calculate_calories(gender, measurementsystem, weight, height, age, goal, act
 
 
 def calculate_macronutrient(goal, calories):
-    # 30 40 30 ratio between protein carbohydrate and fat
     if goal == 'lose weight':
-        return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
+        # 50 20 30 ratio for losing weight
+        return {'protein': int(.5 * calories / 4), 'carbohydrate': int(.2 * calories / 4),
                 'fat': int(.3 * calories / 9)}
     elif goal == 'gain mass':
-        return {'protein': int(.4 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
-                'fat': int(.2 * calories / 9)}
+        # 40 45 15 for gaining mass
+        return {'protein': int(.4 * calories / 4), 'carbohydrate': int(.45 * calories / 4),
+                'fat': int(.15 * calories / 9)}
     else:
+        # 30 40 30 for maintenance
         return {'protein': int(.3 * calories / 4), 'carbohydrate': int(.4 * calories / 4),
                 'fat': int(.3 * calories / 9)}
+
+
+def generate_workout_string(workout):
+    if workout[0].lower() == 'rest':
+        return "Today's a rest day!"
+    string = "You have to do "
+    for item in workout[0:-1]:
+        string += item + ", "
+    string += "and " + workout[-1] + " today. "
+    return string
 
 
 def build_validation_result(is_valid, violated_slot, message_content):
@@ -252,12 +264,15 @@ def personalize(intent_request):
                  'Fulfilled',
                  {'contentType': 'PlainText',
                   'content': 'Nice to meet you, {}! Your daily target calorie goal is {}, '
-                             'your protein goal is {}g, your carbohydrate goal is {}g, and your fat goal is {}g. If '
-                             'you want to set your own goals, just type \'I would like to set my own goals\'. If you '
+                             'your protein goal is {}g, your carbohydrate goal is {}g, and your fat goal is {}g. {} If '
+                             'you want to set your own nutrient goals or workout plan, just say so. If you '
                              'ever need help with any commands, just enter "help"'.format(name, calorie_goal,
                                                                                           protein_goal,
                                                                                           carbohydrate_goal,
-                                                                                          fat_goal)})
+                                                                                          fat_goal,
+                                                                                          generate_workout_string(
+                                                                                              workout[time.strftime(
+                                                                                                  '%A')]))})
 
 
 """ --- Intents --- """

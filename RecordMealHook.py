@@ -193,9 +193,9 @@ def create_new_day(user, intent_request):
     )
 
 
-def get_previous_violations(user):
+def get_previous_exercises_remaining(user):
     latest_day = sorted(list(user['Item']['dailyNutritionAndWorkouts'].keys()))[-1]
-    return user['Item']['dailyNutritionAndWorkouts'][latest_day]['violations']
+    return user['Item']['dailyNutritionAndWorkouts'][latest_day]['exercisesRemaining']
 
 
 def condense_measurement_type(measurement_type):
@@ -305,13 +305,13 @@ def record_meal(intent_request):
                          })
         if is_new_day(user):
             create_new_day(user, intent_request)
-            if not len(get_previous_violations(user)) == 0:
+            if not len(get_previous_exercises_remaining(user)) == 0:
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",
                     {
                         'Excuse': None,
-                        'Violation': generate_violation_string(get_previous_violations(user))
+                        'Violation': 'workout'
                     },
                     {
                         'contentType': 'PlainText',
