@@ -155,7 +155,7 @@ def generate_workout_string(workout):
     if workout[0].lower() == 'rest':
         return "Today's a rest day!"
     if len(workout) == 1:
-        return "You have to " + workout[0] + "today."
+        return "You have to " + workout[0] + " today."
     string = "You have to do "
     for item in workout[0:-1]:
         string += item + ", "

@@ -152,10 +152,10 @@ def generate_violation_message(remaining_nutrition, user):
 
 
 def generate_violation_string(violation):
-    str = ""
+    violation_string = ""
     for word in violation:
-        str += word + " "
-    return str
+        violation_string += word + " "
+    return violation_string
 
 
 def is_new_day(user):
@@ -172,20 +172,17 @@ def create_new_day(user, intent_request):
         UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
         ExpressionAttributeValues={
             ':d': {
-                "dailyNutrientsAndWorkouts": {
-                    time.strftime("%m/%d/%Y"): {
-                        "nutritionRemaining": {
-                            'calorie': user['Item']['calorieGoal'],
-                            'protein': user['Item']['proteinGoal'],
-                            'carbohydrate': user['Item']['carbohydrateGoal'],
-                            'fat': user['Item']['fatGoal']
-                        },
-                        "exercisesRemaining": user['Item']['workout'][time.strftime('%A')],
-                        "violations": [],
-                        "isExcused": None,
-                    }
+                "nutritionRemaining": {
+                    'calorie': user['Item']['nutrientGoal']['calorie'],
+                    'protein': user['Item']['nutrientGoal']['protein'],
+                    'carbohydrate': user['Item']['nutrientGoal']['carbohydrate'],
+                    'fat': user['Item']['nutrientGoal']['fat'],
                 },
-            }
+                "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
+                "violations": [],
+
+            },
+
         },
         ExpressionAttributeNames={
             '#day': time.strftime("%m/%d/%Y"),
@@ -194,8 +191,8 @@ def create_new_day(user, intent_request):
 
 
 def get_previous_exercises_remaining(user):
-    latest_day = sorted(list(user['Item']['dailyNutritionAndWorkouts'].keys()))[-1]
-    return user['Item']['dailyNutritionAndWorkouts'][latest_day]['exercisesRemaining']
+    latest_day = sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
+    return user['Item']['dailyNutrientsAndWorkouts'][latest_day]['exercisesRemaining']
 
 
 def condense_measurement_type(measurement_type):

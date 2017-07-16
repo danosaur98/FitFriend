@@ -97,6 +97,20 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
+def generate_workout_string(workout):
+    if len(workout) == 0:
+        return "Congratulations! You finished all your required workouts for today :) "
+    if workout[0].lower() == 'rest':
+        return "Today's a rest day!"
+    if len(workout) == 1:
+        return "You still have to " + workout[0] + " today."
+    workout_string = "You still have to do "
+    for item in workout[0:-1]:
+        workout_string += item + ", "
+    workout_string += "and " + workout[-1] + " today. "
+    return workout_string
+
+
 def is_valid_exercise(exercise, intent_request):
     response = exercises.get_item(
         Key={
@@ -187,16 +201,14 @@ def record_weightlift(intent_request):
     )
     exercises_remaining = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%m/%d/%Y")]['exercisesRemaining']
     if exercise_name in exercises_remaining:
-        updated_exercises = exercises_remaining.remove(exercise_name)
+        exercises_remaining.remove(exercise_name)
         users.update_item(
             Key={
                 'user': intent_request['userId']
             },
-            UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+            UpdateExpression="set dailyNutrientsAndWorkouts.#day.exercisesRemaining = :e",
             ExpressionAttributeValues={
-                ':d': {
-                    "exercisesRemaining": updated_exercises
-                }
+                ':e': exercises_remaining
             },
             ExpressionAttributeNames={
                 '#day': time.strftime("%m/%d/%Y"),
@@ -207,7 +219,7 @@ def record_weightlift(intent_request):
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': 'test'
+                     'content': 'Good job!! {}'.format(generate_workout_string(exercises_remaining))
                  })
 
 
