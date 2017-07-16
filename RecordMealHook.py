@@ -305,7 +305,8 @@ def record_meal(intent_request):
                          })
         if is_new_day(user):
             create_new_day(user, intent_request)
-            if not len(get_previous_exercises_remaining(user)) == 0:
+            if not len(get_previous_exercises_remaining(user)) == 0 and not get_previous_exercises_remaining(user)[
+                0] == 'rest':
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",
@@ -325,7 +326,7 @@ def record_meal(intent_request):
             if not is_valid_food(food_name, intent_request):
                 return confirm_intent(
                     session_attributes,
-                    'CreateFood',
+                    'CreateFoods',
                     {
                         'FoodName': food_name,
                         'Serving': None,
@@ -387,11 +388,9 @@ def record_meal(intent_request):
         Key={
             'user': intent_request['userId']
         },
-        UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day.nutritionRemaining = :d",
         ExpressionAttributeValues={
-            ':d': {
-                "nutritionRemaining": remaining_nutrition
-            }
+            ':d': remaining_nutrition
         },
         ExpressionAttributeNames={
             '#day': time.strftime("%m/%d/%Y"),
@@ -399,7 +398,7 @@ def record_meal(intent_request):
     )
     violations = find_violations(remaining_nutrition, user)
     if len(violations) != 0:
-        current_violations = user['Item']['violations']
+        current_violations = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%m/%d/%Y")]['violations']
         for item in violations:
             if item not in current_violations:
                 current_violations.append(item)
@@ -407,11 +406,10 @@ def record_meal(intent_request):
             Key={
                 'user': intent_request['userId']
             },
-            UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+            UpdateExpression="set dailyNutrientsAndWorkouts.#day.violations = :v",
             ExpressionAttributeValues={
-                ':d': {
-                    "violations": current_violations
-                }
+                ':v': current_violations
+
             },
             ExpressionAttributeNames={
                 '#day': time.strftime("%m/%d/%Y"),

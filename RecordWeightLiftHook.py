@@ -164,7 +164,7 @@ def record_weightlift(intent_request):
                     },
                     {
                         'contentType': 'PlainText',
-                        'content': '{} is not recognized as one of your foods. Would '
+                        'content': '{} is not recognized as one of your exercises. Would '
                                    'you like to add it?'.format(exercise_name)
 
                     }
@@ -174,6 +174,7 @@ def record_weightlift(intent_request):
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
+        return delegate(session_attributes, get_slots(intent_request))
     exercise_log.put_item(
         Item={
             "UserID": intent_request['userId'],
@@ -184,11 +185,29 @@ def record_weightlift(intent_request):
             "Sets": sets
         }
     )
+    exercises_remaining = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%m/%d/%Y")]['exercisesRemaining']
+    if exercise_name in exercises_remaining:
+        updated_exercises = exercises_remaining.remove(exercise_name)
+        users.update_item(
+            Key={
+                'user': intent_request['userId']
+            },
+            UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+            ExpressionAttributeValues={
+                ':d': {
+                    "exercisesRemaining": updated_exercises
+                }
+            },
+            ExpressionAttributeNames={
+                '#day': time.strftime("%m/%d/%Y"),
+            },
+        )
+
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': 'Keep going!'
+                     'content': 'test'
                  })
 
 

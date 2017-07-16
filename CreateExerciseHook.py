@@ -152,7 +152,7 @@ def create_exercise(intent_request):
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
-            if try_ex(lambda: session_attributes['chainRecordMeal']) is True:
+            if try_ex(lambda: session_attributes['chainRecordWeightLift']) is True:
                 return confirm_intent(
                     session_attributes,
                     intent_request['currentIntent']['name'],

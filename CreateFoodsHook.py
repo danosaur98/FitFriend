@@ -110,11 +110,6 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_number(nutrient):
-    if type(nutrient) == 'int':
-        return True
-
-
 def validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat):
     return build_validation_result(True, None, None)
 
@@ -144,16 +139,6 @@ def create_food(intent_request):
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
         slots = get_slots(intent_request)
-        validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
-        if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
-            return elicit_slot(
-                session_attributes,
-                intent_request['currentIntent']['name'],
-                slots,
-                validation_result['violatedSlot'],
-                validation_result['message']
-            )
         if confirmation_status == 'Denied':
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
@@ -168,61 +153,27 @@ def create_food(intent_request):
                                    slots,
                                    validation_result['violatedSlot'],
                                    validation_result['message'])
+
             return delegate(session_attributes, get_slots(intent_request))
         if confirmation_status == 'Confirmed':
             session_attributes['chainRecordMeal'] = True
-            if not serving:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    intent_request['currentIntent']['slots'],
-                    'Serving',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'How many grams in one serving?'
-                    }
-                )
-            elif not protein:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    intent_request['currentIntent']['slots'],
-                    'Protein',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'How many grams of protein in one serving?'
-                    }
-                )
-            elif not carbohydrate:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    intent_request['currentIntent']['slots'],
-                    'Carbohydrate',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'How many grams of carbohydrates in one serving?'
-                    }
-                )
-            elif not fat:
-                return elicit_slot(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    intent_request['currentIntent']['slots'],
-                    'Fat',
-                    {
-                        'contentType': 'PlainText',
-                        'content': 'How many grams of fat in one serving?'
-                    }
-                )
-            return delegate(session_attributes, intent_request['currentIntent']['slots'])
+            validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
+            if not validation_result['isValid']:
+                slots[validation_result['violatedSlot']] = None
+                return elicit_slot(intent_request['sessionAttributes'],
+                                   intent_request['currentIntent']['name'],
+                                   slots,
+                                   validation_result['violatedSlot'],
+                                   validation_result['message'])
+
+        return delegate(session_attributes, get_slots(intent_request))
 
     foods.put_item(
         Item={
             "UserID": intent_request['userId'],
             "FoodName": food_name,
-            "Calorie": calorie,
             "Serving": serving,
+            "Calorie": calorie,
             "Protein": protein,
             "Carbohydrate": carbohydrate,
             "Fat": fat
@@ -265,7 +216,7 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'CreateFood':
+    if intent_name == 'CreateFoods':
         return create_food(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')

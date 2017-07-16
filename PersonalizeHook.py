@@ -75,7 +75,7 @@ def get_activity_multiplier(activity):
     elif activity == 'moderate':
         return 1.375
     else:
-        return 1.725
+        return 1.525
 
 
 def get_goal_multiplier(goal):
@@ -94,7 +94,7 @@ def get_workout(goal):
                 "Wednesday": ['deadlift', 'bent over row', 'pull up'],
                 "Thursday": ['rest'],
                 "Friday": ['overhead press', 'shoulder press'],
-                "Saturday": ['rest'],
+                "Saturday": ['bench press', 'fly', 'bicep curl', 'tricep extension'], #change this back later
                 "Sunday": ['squat', 'step up', 'leg press']}
     elif goal == 'lose weight':
         return {"Monday": ['run'],
@@ -154,6 +154,8 @@ def calculate_macronutrient(goal, calories):
 def generate_workout_string(workout):
     if workout[0].lower() == 'rest':
         return "Today's a rest day!"
+    if len(workout) == 1:
+        return "You have to " + workout[0] + "today."
     string = "You have to do "
     for item in workout[0:-1]:
         string += item + ", "
