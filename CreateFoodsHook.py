@@ -128,6 +128,7 @@ def create_food(intent_request):
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    chain_create_food = try_ex(lambda: session_attributes['chainCreateFood'])
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
@@ -139,21 +140,40 @@ def create_food(intent_request):
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
         slots = get_slots(intent_request)
+        validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
+        if not validation_result['isValid']:
+            slots[validation_result['violatedSlot']] = None
+            return elicit_slot(intent_request['sessionAttributes'],
+                               intent_request['currentIntent']['name'],
+                               slots,
+                               validation_result['violatedSlot'],
+                               validation_result['message'])
         if confirmation_status == 'Denied':
+            try_ex(lambda: session_attributes.pop('chainCreateFood'))
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
-            validation_result = validate_create_food(food_name, serving, calorie, protein, carbohydrate, fat)
-            if not validation_result['isValid']:
-                slots[validation_result['violatedSlot']] = None
-                return elicit_slot(intent_request['sessionAttributes'],
-                                   intent_request['currentIntent']['name'],
-                                   slots,
-                                   validation_result['violatedSlot'],
-                                   validation_result['message'])
-
+            if not serving and not calorie and not protein and not carbohydrate and not fat:
+                if chain_create_food:
+                    return confirm_intent(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        {
+                            'FoodName': food_name,
+                            'Serving': None,
+                            'Calorie': None,
+                            'Protein': None,
+                            'Carbohydrate': None,
+                            'Fat': None
+                        },
+                        {
+                            'contentType': 'PlainText',
+                            'content': '{} is not recognized as one of your foods. Would '
+                                       'you like to add it?'.format(food_name)
+                        }
+                    )
             return delegate(session_attributes, get_slots(intent_request))
         if confirmation_status == 'Confirmed':
             session_attributes['chainRecordMeal'] = True
@@ -179,6 +199,7 @@ def create_food(intent_request):
             "Fat": fat
         }
     )
+    try_ex(lambda: session_attributes.pop('chainCreateFood'))
     if try_ex(lambda: session_attributes['chainRecordMeal']):
         try_ex(lambda: session_attributes.pop('chainRecordMeal'))
         return confirm_intent(

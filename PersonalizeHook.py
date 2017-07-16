@@ -94,8 +94,8 @@ def get_workout(goal):
                 "Wednesday": ['deadlift', 'bent over row', 'pull up'],
                 "Thursday": ['rest'],
                 "Friday": ['overhead press', 'shoulder press'],
-                "Saturday": ['bench press', 'fly', 'bicep curl', 'tricep extension'], #change this back later
-                "Sunday": ['squat', 'step up', 'leg press']}
+                "Saturday": ['rest'],
+                "Sunday": ['squat', 'leg press']}
     elif goal == 'lose weight':
         return {"Monday": ['run'],
                 "Tuesday": ['bench press', 'fly', 'bicep curl', 'tricep extension'],

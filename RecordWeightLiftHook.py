@@ -101,7 +101,7 @@ def generate_workout_string(workout):
     if len(workout) == 0:
         return "Congratulations! You finished all your required workouts for today :) "
     if workout[0].lower() == 'rest':
-        return "Today's a rest day!"
+        return "Today's a rest day, but I'm so happy to see you working out still!"
     if len(workout) == 1:
         return "You still have to " + workout[0] + " today."
     workout_string = "You still have to do "
@@ -169,6 +169,7 @@ def record_weightlift(intent_request):
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             if not is_valid_exercise(exercise_name, intent_request):
+                session_attributes['chainCreateExercise'] = True
                 return confirm_intent(
                     session_attributes,
                     'CreateExercise',

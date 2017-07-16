@@ -127,12 +127,13 @@ def validate_create_exercise(name, muscle_group):
 
 
 def create_exercise(intent_request):
-    exercise = get_slots(intent_request)["Exercise"]
+    exercise_name = get_slots(intent_request)["Exercise"]
     muscle_group = get_slots(intent_request)["MuscleGroup"]
     user = get_user(intent_request)
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    chain_create_exercise = try_ex(lambda: session_attributes['chainCreateExercise'])
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -145,41 +146,40 @@ def create_exercise(intent_request):
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
         slots = get_slots(intent_request)
-
+        validation_result = validate_create_exercise(exercise_name, muscle_group)
+        if not validation_result['isValid']:
+            slots[validation_result['violatedSlot']] = None
+            return elicit_slot(intent_request['sessionAttributes'],
+                               intent_request['currentIntent']['name'],
+                               slots,
+                               validation_result['violatedSlot'],
+                               validation_result['message'])
         if confirmation_status == 'Denied':
+            try_ex(lambda: session_attributes.pop('chainCreateExercise'))
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
-            if try_ex(lambda: session_attributes['chainRecordWeightLift']) is True:
-                return confirm_intent(
-                    session_attributes,
-                    intent_request['currentIntent']['name'],
-                    {
-                        'Exercise': exercise,
-                        'MuscleGroup': None
-                    },
-                    {
-                        'contentType': 'PlainText',
-                        'content': '{} is not recognized as one of your exercises. Would '
-                                   'you like to add it?'.format(exercise)
-                    }
-                )
-            else:
-                validation_result = validate_create_exercise(exercise, muscle_group)
-                if not validation_result['isValid']:
-                    slots[validation_result['violatedSlot']] = None
-                    return elicit_slot(intent_request['sessionAttributes'],
-                                       intent_request['currentIntent']['name'],
-                                       slots,
-                                       validation_result['violatedSlot'],
-                                       validation_result['message'])
-
+            if not muscle_group:
+                if chain_create_exercise:
+                    return confirm_intent(
+                        session_attributes,
+                        intent_request['currentIntent']['name'],
+                        {
+                            'Exercise': exercise_name,
+                            'MuscleGroup': None
+                        },
+                        {
+                            'contentType': 'PlainText',
+                            'content': '{} is not recognized as one of your exercises. Would '
+                                       'you like to add it?'.format(exercise_name)
+                        }
+                    )
             return delegate(session_attributes, get_slots(intent_request))
         if confirmation_status == 'Confirmed':
             session_attributes['chainRecordWeightLift'] = True
-            validation_result = validate_create_exercise(exercise, muscle_group)
+            validation_result = validate_create_exercise(exercise_name, muscle_group)
             if not validation_result['isValid']:
                 slots[validation_result['violatedSlot']] = None
                 return elicit_slot(intent_request['sessionAttributes'],
@@ -193,17 +193,18 @@ def create_exercise(intent_request):
     exercises.put_item(
         Item={
             "UserID": intent_request['userId'],
-            "ExerciseName": exercise,
+            "ExerciseName": exercise_name,
             "MuscleGroup": muscle_group
         }
     )
+    try_ex(lambda: session_attributes.pop('chainCreateExercise'))
     if try_ex(lambda: session_attributes['chainRecordWeightLift']):
         try_ex(lambda: session_attributes.pop('chainRecordWeightLift'))
         return confirm_intent(
             session_attributes,
             'RecordWeightlift',
             {
-                'Exercise': exercise,
+                'Exercise': exercise_name,
                 'Weight': None,
                 'Reps': None,
                 'Sets': None
@@ -211,15 +212,14 @@ def create_exercise(intent_request):
             {
                 'contentType': 'PlainText',
                 'content': 'Got it! {} has been added to your exercises. Would you like to finish inputting your '
-                           'workout?'.format(
-                    exercise)
+                           'workout?'.format(exercise_name)
             }
         )
     else:
         return close(intent_request['sessionAttributes'],
                      'Fulfilled',
                      {'contentType': 'PlainText',
-                      'content': 'Got it! {} has been added to your exercises'.format(exercise)})
+                      'content': 'Got it! {} has been added to your exercises'.format(exercise_name)})
 
 
 """ --- Intents --- """
