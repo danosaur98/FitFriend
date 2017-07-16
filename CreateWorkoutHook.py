@@ -4,9 +4,8 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-exercise_log = dynamodb.Table('ExerciseLog')
-exercises = dynamodb.Table('Exercises')
 users = dynamodb.Table('Users')
+exercises = dynamodb.Table('Exercises')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -111,20 +110,6 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def generate_workout_string(workout):
-    if len(workout) == 0:
-        return "Congratulations! You finished all your required workouts for today :) "
-    if workout[0].lower() == 'rest':
-        return "Today's a rest day, but I'm so happy to see you working out still!"
-    if len(workout) == 1:
-        return "You still have to " + workout[0] + " today."
-    workout_string = "You still have to do "
-    for item in workout[0:-1]:
-        workout_string += item + ", "
-    workout_string += "and " + workout[-1] + " today. "
-    return workout_string
-
-
 def is_valid_exercise(exercise, intent_request):
     response = exercises.get_item(
         Key={
@@ -146,27 +131,25 @@ def is_valid_exercise(exercise, intent_request):
     return False
 
 
-def validate_record_weightlift(exercise, weight, reps, sets, intent_request):
-    if exercise is not None:
-        if not is_valid_exercise(exercise, intent_request):
-            return build_validation_result(False, 'Exercise', '{} is not recognized as one of your exercises. Would '
-                                                              'you like to add it?'.format(exercise))
-
+def validate_create_workout(Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday):
     return build_validation_result(True, None, None)
 
 
 """ --- Functions that control the bot's behavior --- """
 
 
-def record_weightlift(intent_request):
-    exercise_name = get_slots(intent_request)["Exercise"]
-    weight = get_slots(intent_request)["Weight"]
-    reps = get_slots(intent_request)["Reps"]
-    sets = get_slots(intent_request)["Sets"]
+def create_workout(intent_request):
+    monday = get_slots(intent_request)["Monday"]
+    tuesday = get_slots(intent_request)["Tuesday"]
+    wednesday = get_slots(intent_request)["Wednesday"]
+    thursday = get_slots(intent_request)["Thursday"]
+    friday = get_slots(intent_request)["Friday"]
+    saturday = get_slots(intent_request)["Saturday"]
+    sunday = get_slots(intent_request)["Sunday"]
     user = get_user(intent_request)
     source = intent_request['invocationSource']
-    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
+    session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
@@ -177,69 +160,40 @@ def record_weightlift(intent_request):
                              'contentType': 'PlainText',
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
-        if confirmation_status == 'Denied':
-            return close(intent_request['sessionAttributes'],
-                         'Fulfilled',
-                         {'contentType': 'PlainText',
-                          'content': 'Okay, let me know when you do work out!'})
         slots = get_slots(intent_request)
-        validation_result = validate_record_weightlift(exercise_name, weight, reps, sets, intent_request)
+        validation_result = validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
-            if not is_valid_exercise(exercise_name, intent_request):
-                session_attributes['chainCreateExercise'] = True
-                return confirm_intent(
-                    session_attributes,
-                    'CreateExercise',
-                    {
-                        'Exercise': exercise_name,
-                        'MuscleGroup': None
-                    },
-                    {
-                        'contentType': 'PlainText',
-                        'content': '{} is not recognized as one of your exercises. Would '
-                                   'you like to add it?'.format(exercise_name)
-
-                    }
-                )
             return elicit_slot(intent_request['sessionAttributes'],
                                intent_request['currentIntent']['name'],
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
         return delegate(session_attributes, get_slots(intent_request))
-    exercise_log.put_item(
-        Item={
-            "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y %T"),
-            "ExerciseName": exercise_name,
-            "Weight": weight,
-            "Reps": reps,
-            "Sets": sets
-        }
+
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set workoutSchedule = :w",
+        ExpressionAttributeValues={
+            ':w': {
+                'Monday': monday,
+                'Tuesday': tuesday,
+                'Wednesday': wednesday,
+                'Thursday': thursday,
+                'Friday': friday,
+                'Saturday': saturday,
+                'Sunday': sunday
+            }
+        },
+
     )
-    exercises_remaining = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%m/%d/%Y")]['exercisesRemaining']
-    if exercise_name in exercises_remaining:
-        exercises_remaining.remove(exercise_name)
-        users.update_item(
-            Key={
-                'user': intent_request['userId']
-            },
-            UpdateExpression="set dailyNutrientsAndWorkouts.#day.exercisesRemaining = :e",
-            ExpressionAttributeValues={
-                ':e': exercises_remaining
-            },
-            ExpressionAttributeNames={
-                '#day': time.strftime("%m/%d/%Y"),
-            },
-        )
 
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
-                 {
-                     'contentType': 'PlainText',
-                     'content': 'Good job!! {}'.format(generate_workout_string(exercises_remaining))
-                 })
+                 {'contentType': 'PlainText',
+                  'content': 'Okay, your workout schedule has been updated!'})
 
 
 """ --- Intents --- """
@@ -256,8 +210,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'RecordWeightlift':
-        return record_weightlift(intent_request)
+    if intent_name == 'CreateWorkout':
+        return create_workout(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

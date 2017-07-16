@@ -289,6 +289,7 @@ def record_meal(intent_request):
     user = get_user(intent_request)
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
+    confirmation_status = intent_request['currentIntent']['confirmationStatus']
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -316,6 +317,11 @@ def record_meal(intent_request):
                         'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday?'
                     }
                 )
+        if confirmation_status == 'Denied':
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {'contentType': 'PlainText',
+                          'content': 'Okay, let me know when you do eat something!'})
         slots = get_slots(intent_request)
         validation_result = validate_record_meal(food_name, measurement, measurement_type, intent_request)
         if not validation_result['isValid']:
