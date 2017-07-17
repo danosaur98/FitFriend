@@ -4,7 +4,6 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-exercise_log = dynamodb.Table('ExerciseLog')
 users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -83,7 +82,7 @@ def is_valid_user(user):
 
 
 def is_new_day(user):
-    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+    if not time.strftime("%Y-%m-%d") in user['Item']['dailyNutrientsAndWorkouts']:
         return True
     return False
 
@@ -104,12 +103,13 @@ def create_new_day(user, intent_request):
                 },
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
-
+                "foodLog": {},
+                "exerciseLog": {}
             },
 
         },
         ExpressionAttributeNames={
-            '#day': time.strftime("%m/%d/%Y"),
+            '#day': time.strftime("%Y-%m-%d"),
         },
     )
 
@@ -196,15 +196,27 @@ def record_run(intent_request):
                                validation_result['violatedSlot'],
                                validation_result['message'])
         return delegate(session_attributes, get_slots(intent_request))
-    exercise_log.put_item(
-        Item={
-            "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y"),
-            "ExerciseName": "run",
-            "Distance": distance,
-            "Duration": duration,
-            "Incline": incline,
-        }
+    current_exercise_log = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%Y-%m-%d")]['exerciseLog']
+    current_exercise_log[time.strftime('%T')] = {
+        "ExerciseName": 'run',
+        "Distance": distance,
+        "Duration": duration,
+        "Incline": incline}
+    exercises_remaining = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%Y-%m-%d")]['exercisesRemaining']
+    if 'run' in exercises_remaining:
+        exercises_remaining.remove('run')
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day.exercisesRemaining = :e, dailyNutrientsAndWorkouts.#day.exerciseLog = :l",
+        ExpressionAttributeValues={
+            ':e': exercises_remaining,
+            ':l': current_exercise_log
+        },
+        ExpressionAttributeNames={
+            '#day': time.strftime("%Y-%m-%d"),
+        },
     )
     return close(session_attributes,
                  'Fulfilled',

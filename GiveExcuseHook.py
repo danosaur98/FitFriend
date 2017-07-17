@@ -110,7 +110,7 @@ def give_excuse(intent_request):
                 Item={
                     "UserId": intent_request['userId'],
                     "Date": time.strftime("%m/%d/%Y %T"),
-                    "Excuse": 'I am weak and I succumb to temptations easily.',
+                    "Excuse": 'I am weak both mentally and physically',
                     "Violation": violation.split(),
                 }
             )

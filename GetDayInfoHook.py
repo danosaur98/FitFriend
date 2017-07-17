@@ -4,7 +4,6 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-exercises = dynamodb.Table('Exercises')
 users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -158,31 +157,42 @@ def build_validation_result(is_valid, violated_slot, message_content):
     }
 
 
-def is_valid_muscle_group(muscle_group):
-    valid_muscle_groups = ['shoulder', 'arms', 'back', 'legs', 'chest', 'core']
-    return muscle_group.lower() in valid_muscle_groups
+def generate_day_information_string(day, user):
+    if user['Item']['measurementSystem'] == 'imperial system':
+        measurement = 'lbs'
+    else:
+        measurement = 'kgs'
+    exercise_log = user['Item']['dailyNutrientsAndWorkouts'][day]['exerciseLog']
+    if len(exercise_log) == 0:
+        return "Nothing yet!"
+    information_string = "You did "
+    for exercise_time, exercise in exercise_log.items():
+        information_string += exercise['ExerciseName'] + ' at ' + exercise['Weight'] + measurement + ' for ' + exercise[
+            'Reps'] + ' reps and ' + exercise['Sets'] + ' sets, '
+    return information_string
 
 
-def validate_create_exercise(name, muscle_group):
-    if muscle_group is not None:
-        if not is_valid_muscle_group(muscle_group):
-            return build_validation_result(False, 'MuscleGroup', 'Does {} primarily work the arms, back, chest, core, '
-                                                                 'shoulder, or legs?'.format(name))
+def is_valid_day(day, user):
+    if day in user['Item']['dailyNutrientsAndWorkouts']:
+        return True
+    return False
+
+
+def validate_get_day_information(day, user):
+    if day is not None:
+        if not is_valid_day(day, user):
+            return build_validation_result(False, 'Day', 'I don\'t have any records for that day. Try some other day')
     return build_validation_result(True, None, None)
 
 
 """ --- Functions that control the bot's behavior --- """
 
 
-def create_exercise(intent_request):
-    exercise_name = get_slots(intent_request)["Exercise"]
-    muscle_group = get_slots(intent_request)["MuscleGroup"]
+def get_day_information(intent_request):
+    day = get_slots(intent_request)["Day"]
     user = get_user(intent_request)
     source = intent_request['invocationSource']
-    confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-    chain_record_weight_lift = try_ex(lambda: session_attributes['chainRecordWeightLift'])
-    chain_create_workout = try_ex(lambda: session_attributes['chainCreateWorkout'])
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -212,7 +222,7 @@ def create_exercise(intent_request):
                     }
                 )
         slots = get_slots(intent_request)
-        validation_result = validate_create_exercise(exercise_name, muscle_group)
+        validation_result = validate_get_day_information(day, user)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             return elicit_slot(intent_request['sessionAttributes'],
@@ -220,91 +230,12 @@ def create_exercise(intent_request):
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
-        if confirmation_status == 'Denied':
-            try_ex(lambda: session_attributes.pop('chainRecordWeightLift'))
-            try_ex(lambda: session_attributes.pop('chainCreateWorkout'))
-            return close(intent_request['sessionAttributes'],
-                         'Fulfilled',
-                         {'contentType': 'PlainText',
-                          'content': 'It\'s all good in the hood!'})
-        if confirmation_status == 'None':
-            if not muscle_group:
-                if chain_record_weight_lift or chain_create_workout:
-                    return confirm_intent(
-                        session_attributes,
-                        intent_request['currentIntent']['name'],
-                        {
-                            'Exercise': exercise_name,
-                            'MuscleGroup': None
-                        },
-                        {
-                            'contentType': 'PlainText',
-                            'content': '{} is not recognized as one of your exercises. Would '
-                                       'you like to add it?'.format(exercise_name)
-                        }
-                    )
-            return delegate(session_attributes, get_slots(intent_request))
-        if confirmation_status == 'Confirmed':
-            validation_result = validate_create_exercise(exercise_name, muscle_group)
-            if not validation_result['isValid']:
-                slots[validation_result['violatedSlot']] = None
-                return elicit_slot(intent_request['sessionAttributes'],
-                                   intent_request['currentIntent']['name'],
-                                   slots,
-                                   validation_result['violatedSlot'],
-                                   validation_result['message'])
-
         return delegate(session_attributes, get_slots(intent_request))
 
-    exercises.put_item(
-        Item={
-            "UserID": intent_request['userId'],
-            "ExerciseName": exercise_name,
-            "MuscleGroup": muscle_group
-        }
-    )
-    if try_ex(lambda: session_attributes['chainRecordWeightLift']):
-        try_ex(lambda: session_attributes.pop('chainRecordWeightLift'))
-        return confirm_intent(
-            session_attributes,
-            'RecordWeightlift',
-            {
-                'Exercise': exercise_name,
-                'Weight': None,
-                'Reps': None,
-                'Sets': None
-            },
-            {
-                'contentType': 'PlainText',
-                'content': 'Got it! {} has been added to your exercises. Would you like to finish inputting your '
-                           'workout?'.format(exercise_name)
-            }
-        )
-    elif try_ex(lambda: session_attributes['chainCreateWorkout']):
-        try_ex(lambda: session_attributes.pop('chainCreateWorkout'))
-        return confirm_intent(
-            session_attributes,
-            'CreateWorkout',
-            {
-                'Monday': session_attributes['Monday'],
-                'Tuesday': session_attributes['Tuesday'],
-                'Wednesday': session_attributes['Wednesday'],
-                'Thursday': session_attributes['Thursday'],
-                'Friday': session_attributes['Friday'],
-                'Saturday': session_attributes['Saturday'],
-                'Sunday': session_attributes['Sunday']
-            },
-            {
-                'contentType': 'PlainText',
-                'content': 'Got it! {} has been added to your exercises. Would you like to finish creating your '
-                           'workout schedule?'.format(exercise_name)
-            }
-        )
-    else:
-        return close(intent_request['sessionAttributes'],
-                     'Fulfilled',
-                     {'contentType': 'PlainText',
-                      'content': 'Got it! {} has been added to your exercises'.format(exercise_name)})
+    return close(intent_request['sessionAttributes'],
+                 'Fulfilled',
+                 {'contentType': 'PlainText',
+                  'content': generate_day_information_string(day, user)})
 
 
 """ --- Intents --- """
@@ -321,8 +252,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'CreateExercise':
-        return create_exercise(intent_request)
+    if intent_name == 'GetDayInformation':
+        return get_day_information(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

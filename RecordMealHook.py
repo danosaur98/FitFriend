@@ -4,7 +4,6 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-food_log = dynamodb.Table('FoodLog')
 foods = dynamodb.Table('Foods')
 users = dynamodb.Table('Users')
 logger = logging.getLogger()
@@ -159,7 +158,7 @@ def generate_violation_string(violation):
 
 
 def is_new_day(user):
-    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+    if not time.strftime("%Y-%m-%d") in user['Item']['dailyNutrientsAndWorkouts']:
         return True
     return False
 
@@ -180,12 +179,13 @@ def create_new_day(user, intent_request):
                 },
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
-
+                "foodLog": {},
+                "exerciseLog": {}
             },
 
         },
         ExpressionAttributeNames={
-            '#day': time.strftime("%m/%d/%Y"),
+            '#day': time.strftime("%Y-%m-%d"),
         },
     )
 
@@ -241,7 +241,7 @@ def get_remaining_nutrition(food_nutrition, intent_request):
             'user': intent_request['userId'],
         }
     )
-    today = time.strftime("%m/%d/%Y")
+    today = time.strftime("%Y-%m-%d")
     calorie = user['Item']['dailyNutrientsAndWorkouts'][today]['nutritionRemaining']['calorie'] - food_nutrition[
         'calorie']
     protein = user['Item']['dailyNutrientsAndWorkouts'][today]['nutritionRemaining']['protein'] - food_nutrition[
@@ -388,32 +388,28 @@ def record_meal(intent_request):
         return delegate(session_attributes, get_slots(intent_request))
     food_nutrition = calculate_nutrition(food_name, measurement, measurement_type, intent_request)
     remaining_nutrition = get_remaining_nutrition(food_nutrition, intent_request)
-    food_log.put_item(
-        Item={
-            "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y %T"),
-            "FoodName": food_name,
-            "Measurement": measurement,
-            "MeasurementType": measurement_type,
-            "FoodNutrition": food_nutrition,
-            "NutritionRemaining": remaining_nutrition
-        }
-    )
+    current_food_log = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%Y-%m-%d")]['foodLog']
+    current_food_log[time.strftime('%T')] = {
+        "FoodName": food_name,
+        "Measurement": measurement,
+        "MeasurementType": measurement_type,
+        "FoodNutrition": food_nutrition, }
     users.update_item(
         Key={
             'user': intent_request['userId']
         },
-        UpdateExpression="set dailyNutrientsAndWorkouts.#day.nutritionRemaining = :d",
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day.nutritionRemaining = :n, dailyNutrientsAndWorkouts.#day.foodLog = :f",
         ExpressionAttributeValues={
-            ':d': remaining_nutrition
+            ':n': remaining_nutrition,
+            ':f': current_food_log
         },
         ExpressionAttributeNames={
-            '#day': time.strftime("%m/%d/%Y"),
+            '#day': time.strftime("%Y-%m-%d"),
         },
     )
     violations = find_violations(remaining_nutrition, user)
     if len(violations) != 0:
-        current_violations = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%m/%d/%Y")]['violations']
+        current_violations = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%Y-%m-%d")]['violations']
         for item in violations:
             if item not in current_violations:
                 current_violations.append(item)
@@ -427,7 +423,7 @@ def record_meal(intent_request):
 
             },
             ExpressionAttributeNames={
-                '#day': time.strftime("%m/%d/%Y"),
+                '#day': time.strftime("%Y-%m-%d"),
             },
         )
         return confirm_intent(

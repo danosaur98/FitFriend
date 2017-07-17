@@ -4,7 +4,6 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-exercise_log = dynamodb.Table('ExerciseLog')
 exercises = dynamodb.Table('Exercises')
 users = dynamodb.Table('Users')
 logger = logging.getLogger()
@@ -98,7 +97,7 @@ def is_valid_user(user):
 
 
 def is_new_day(user):
-    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+    if not time.strftime("%Y-%m-%d") in user['Item']['dailyNutrientsAndWorkouts']:
         return True
     return False
 
@@ -119,12 +118,13 @@ def create_new_day(user, intent_request):
                 },
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
-
+                "foodLog": {},
+                "exerciseLog": {}
             },
 
         },
         ExpressionAttributeNames={
-            '#day': time.strftime("%m/%d/%Y"),
+            '#day': time.strftime("%Y-%m-%d"),
         },
     )
 
@@ -162,7 +162,7 @@ def generate_workout_string(workout):
     if len(workout) == 0:
         return "Congratulations! You finished all your required workouts for today :) "
     if workout[0].lower() == 'rest':
-        return "Today's a rest day, but I'm so happy to see you working out still!"
+        return "Today's a rest day, but I'm so happy to see you working out nonetheless!"
     if len(workout) == 1:
         return "You still have to " + workout[0] + " today."
     workout_string = "You still have to do "
@@ -272,31 +272,29 @@ def record_weightlift(intent_request):
                                validation_result['violatedSlot'],
                                validation_result['message'])
         return delegate(session_attributes, get_slots(intent_request))
-    exercise_log.put_item(
-        Item={
-            "UserID": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y %T"),
-            "ExerciseName": exercise_name,
-            "Weight": weight,
-            "Reps": reps,
-            "Sets": sets
-        }
-    )
-    exercises_remaining = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%m/%d/%Y")]['exercisesRemaining']
+    current_exercise_log = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%Y-%m-%d")]['exerciseLog']
+    current_exercise_log[time.strftime('%T')] = {
+        "ExerciseName": exercise_name,
+        "Weight": weight,
+        "Reps": reps,
+        "Sets": sets}
+
+    exercises_remaining = user['Item']['dailyNutrientsAndWorkouts'][time.strftime("%Y-%m-%d")]['exercisesRemaining']
     if exercise_name in exercises_remaining:
         exercises_remaining.remove(exercise_name)
-        users.update_item(
-            Key={
-                'user': intent_request['userId']
-            },
-            UpdateExpression="set dailyNutrientsAndWorkouts.#day.exercisesRemaining = :e",
-            ExpressionAttributeValues={
-                ':e': exercises_remaining
-            },
-            ExpressionAttributeNames={
-                '#day': time.strftime("%m/%d/%Y"),
-            },
-        )
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day.exercisesRemaining = :e, dailyNutrientsAndWorkouts.#day.exerciseLog = :l",
+        ExpressionAttributeValues={
+            ':e': exercises_remaining,
+            ':l': current_exercise_log
+        },
+        ExpressionAttributeNames={
+            '#day': time.strftime("%Y-%m-%d"),
+        },
+    )
 
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',

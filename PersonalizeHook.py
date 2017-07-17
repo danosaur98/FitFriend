@@ -249,7 +249,7 @@ def personalize(intent_request):
             },
             "workoutSchedule": workout,
             "dailyNutrientsAndWorkouts": {
-                time.strftime("%m/%d/%Y"): {
+                time.strftime("%Y-%m-%d"): {
                     "nutritionRemaining": {
                         'calorie': calorie_goal,
                         'protein': protein_goal,
@@ -258,6 +258,8 @@ def personalize(intent_request):
                     },
                     "exercisesRemaining": workout[time.strftime('%A')],
                     "violations": [],
+                    "foodLog": {},
+                    "exerciseLog": {}
                 }
             },
         }

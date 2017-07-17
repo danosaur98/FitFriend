@@ -97,7 +97,7 @@ def is_valid_user(user):
 
 
 def is_new_day(user):
-    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+    if not time.strftime("%Y-%m-%d") in user['Item']['dailyNutrientsAndWorkouts']:
         return True
     return False
 
@@ -118,12 +118,13 @@ def create_new_day(user, intent_request):
                 },
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
-
+                "foodLog": {},
+                "exerciseLog": {}
             },
 
         },
         ExpressionAttributeNames={
-            '#day': time.strftime("%m/%d/%Y"),
+            '#day': time.strftime("%Y-%m-%d"),
         },
     )
 
