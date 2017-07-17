@@ -158,17 +158,40 @@ def build_validation_result(is_valid, violated_slot, message_content):
 
 
 def generate_day_information_string(day, user):
+    information_string = ""
     if user['Item']['measurementSystem'] == 'imperial system':
         measurement = 'lbs'
     else:
         measurement = 'kgs'
     exercise_log = user['Item']['dailyNutrientsAndWorkouts'][day]['exerciseLog']
-    if len(exercise_log) == 0:
-        return "Nothing yet!"
-    information_string = "You did "
-    for exercise_time, exercise in exercise_log.items():
-        information_string += exercise['ExerciseName'] + ' at ' + exercise['Weight'] + measurement + ' for ' + exercise[
-            'Reps'] + ' reps and ' + exercise['Sets'] + ' sets, '
+    if not len(exercise_log) == 0:
+        information_string += "You did "
+        for exercise_time, exercise in exercise_log.items():
+            information_string += exercise['ExerciseName'] + ' at ' + exercise['Weight'] + measurement + ' for ' + \
+                                  exercise[
+                                      'Reps'] + ' reps and ' + exercise['Sets'] + ' sets, '
+    food_log = user['Item']['dailyNutrientsAndWorkouts'][day]['foodLog']
+    if not len(food_log) == 0:
+        for food_time, food in food_log.items():
+            information_string += 'you ate ' + str(food['Measurement']) + ' ' + str(
+                food['MeasurementType']) + ' of ' + str(food['FoodName']) + ' (' + str(
+                food['FoodNutrition']['calorie']) + 'cal, ' + str(food['FoodNutrition']['protein']) + ' p, ' + str(
+                food['FoodNutrition']['carbohydrate']) + ' c, ' + str(food['FoodNutrition']['fat']) + 'f), '
+        nutrient_goal = user['Item']['nutrientGoal']
+        nutrition_remaining = user['Item']['dailyNutrientsAndWorkouts'][day]['nutritionRemaining']
+        information_string += 'for a total of ' + str(
+            int(nutrient_goal['calorie']) - int(nutrition_remaining['calorie'])) + ' cals, ' + str(
+            int(nutrient_goal['protein']) - int(nutrition_remaining['protein'])) + ' p, ' + str(
+            int(nutrient_goal['carbohydrate']) - int(nutrition_remaining['carbohydrate'])) + ' c, ' + str(
+            int(nutrient_goal['fat']) - int(nutrition_remaining['fat'])) + ' fat, '
+    violations = user['Item']['dailyNutrientsAndWorkouts'][day]['violations']
+    if not len(violations) == 0:
+        information_string += ' and you went over your '
+        for violation in violations:
+            information_string += violation + ', '
+        information_string += ' limits.'
+    if len(information_string) == 0:
+        return 'Nothing yet!'
     return information_string
 
 

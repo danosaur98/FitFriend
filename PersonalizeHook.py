@@ -259,7 +259,8 @@ def personalize(intent_request):
                     "exercisesRemaining": workout[time.strftime('%A')],
                     "violations": [],
                     "foodLog": {},
-                    "exerciseLog": {}
+                    "exerciseLog": {},
+                    "excuses": {}
                 }
             },
         }

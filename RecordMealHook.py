@@ -420,7 +420,6 @@ def record_meal(intent_request):
             UpdateExpression="set dailyNutrientsAndWorkouts.#day.violations = :v",
             ExpressionAttributeValues={
                 ':v': current_violations
-
             },
             ExpressionAttributeNames={
                 '#day': time.strftime("%Y-%m-%d"),

@@ -278,7 +278,7 @@ def create_workout(intent_request):
         validation_result = validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday,
                                                     intent_request)
         if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
+            # slots[validation_result['violatedSlot']] = None
             for weekday in workout_routine:
                 if weekday is not None:
                     for exercise in weekday:
@@ -320,11 +320,25 @@ def create_workout(intent_request):
     try_ex(lambda: session_attributes.pop('Friday'))
     try_ex(lambda: session_attributes.pop('Saturday'))
     try_ex(lambda: session_attributes.pop('Sunday'))
+    if time.strftime('%A') == 'Monday':
+        todays_workout = monday
+    elif time.strftime('%A') == 'Tuesday':
+        todays_workout = tuesday
+    elif time.strftime('%A') == 'Wednesday':
+        todays_workout = wednesday
+    elif time.strftime('%A') == 'Thursday':
+        todays_workout = thursday
+    elif time.strftime('%A') == 'Friday':
+        todays_workout = friday
+    elif time.strftime('%A') == 'Saturday':
+        todays_workout = saturday
+    else:
+        todays_workout = sunday
     users.update_item(
         Key={
             'user': intent_request['userId']
         },
-        UpdateExpression="set workoutSchedule = :w",
+        UpdateExpression="set workoutSchedule = :w, dailyNutrientsAndWorkouts.#day.exercisesRemaining = :e",
         ExpressionAttributeValues={
             ':w': {
                 'Monday': monday,
@@ -334,9 +348,9 @@ def create_workout(intent_request):
                 'Friday': friday,
                 'Saturday': saturday,
                 'Sunday': sunday
-            }
+            },
+            ':e': todays_workout
         },
-
     )
 
     return close(intent_request['sessionAttributes'],
