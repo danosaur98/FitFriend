@@ -94,7 +94,7 @@ table.put_item(
     Item={
         "HowTo": "https://www.youtube.com/watch?v=ykJmrZ5v0Oo",
         "MuscleGroup": "arms",
-        "ExerciseName": "bicep curl",
+        "ExerciseName": "biceps curl",
         "UserID": "universal"
     }
 )
@@ -102,7 +102,7 @@ table.put_item(
     Item={
         "HowTo": "https://www.youtube.com/watch?v=YbX7Wd8jQ-Q",
         "MuscleGroup": "arms",
-        "ExerciseName": "tricep extension",
+        "ExerciseName": "triceps extension",
         "UserID": "universal"
     }
 )

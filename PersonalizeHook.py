@@ -89,7 +89,7 @@ def get_goal_multiplier(goal):
 
 def get_workout(goal):
     if goal == 'gain mass':
-        return {"Monday": ['bench press', 'fly', 'bicep curl', 'triceps extension'],
+        return {"Monday": ['bench press', 'fly', 'biceps curl', 'triceps extension'],
                 "Tuesday": ['run'],
                 "Wednesday": ['deadlift', 'bent over row', 'pull up'],
                 "Thursday": ['rest'],
@@ -98,14 +98,14 @@ def get_workout(goal):
                 "Sunday": ['squat', 'leg press']}
     elif goal == 'lose weight':
         return {"Monday": ['run'],
-                "Tuesday": ['bench press', 'fly', 'bicep curl', 'triceps extension'],
+                "Tuesday": ['bench press', 'fly', 'biceps curl', 'triceps extension'],
                 "Wednesday": ['rest'],
                 "Thursday": ['run'],
                 "Friday": ['rest'],
                 "Saturday": ['run'],
                 "Sunday": ['rest']}
     else:
-        return {"Monday": ['bench press', 'fly', 'bicep curl', 'triceps extension'],
+        return {"Monday": ['bench press', 'fly', 'biceps curl', 'triceps extension'],
                 "Tuesday": ['run'],
                 "Wednesday": ['rest'],
                 "Thursday": ['deadlift', 'bent over row', 'pull up'],
