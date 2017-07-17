@@ -175,7 +175,7 @@ def create_food(intent_request):
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-    chain_create_food = try_ex(lambda: session_attributes['chainCreateFood'])
+    chain_record_meal = try_ex(lambda: session_attributes['chainRecordMeal'])
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
         # Use the elicitSlot dialog action to re-prompt for the first violation detected.
@@ -220,7 +220,7 @@ def create_food(intent_request):
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
             if not serving and not calorie and not protein and not carbohydrate and not fat:
-                if chain_create_food:
+                if chain_record_meal:
                     return confirm_intent(
                         session_attributes,
                         intent_request['currentIntent']['name'],

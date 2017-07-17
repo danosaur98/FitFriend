@@ -338,7 +338,7 @@ def record_meal(intent_request):
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             if not is_valid_food(food_name, intent_request):
-                session_attributes['chainCreateFood'] = True
+                session_attributes['chainRecordMeal'] = True
                 return confirm_intent(
                     session_attributes,
                     'CreateFoods',

@@ -180,7 +180,8 @@ def create_exercise(intent_request):
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
-    chain_create_exercise = try_ex(lambda: session_attributes['chainCreateExercise'])
+    chain_record_weight_lift = try_ex(lambda: session_attributes['chainRecordWeightLift'])
+    chain_create_workout = try_ex(lambda: session_attributes['chainCreateWorkout'])
 
     if source == 'DialogCodeHook':
         # Perform basic validation on the supplied input slots.
@@ -219,14 +220,15 @@ def create_exercise(intent_request):
                                validation_result['violatedSlot'],
                                validation_result['message'])
         if confirmation_status == 'Denied':
-            try_ex(lambda: session_attributes.pop('chainCreateExercise'))
+            try_ex(lambda: session_attributes.pop('chainRecordWeightLift'))
+            try_ex(lambda: session_attributes.pop('chainCreateWorkout'))
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
                          {'contentType': 'PlainText',
                           'content': 'It\'s all good in the hood!'})
         if confirmation_status == 'None':
             if not muscle_group:
-                if chain_create_exercise:
+                if chain_record_weight_lift or chain_create_workout:
                     return confirm_intent(
                         session_attributes,
                         intent_request['currentIntent']['name'],
@@ -242,7 +244,6 @@ def create_exercise(intent_request):
                     )
             return delegate(session_attributes, get_slots(intent_request))
         if confirmation_status == 'Confirmed':
-            session_attributes['chainRecordWeightLift'] = True
             validation_result = validate_create_exercise(exercise_name, muscle_group)
             if not validation_result['isValid']:
                 slots[validation_result['violatedSlot']] = None
@@ -261,7 +262,6 @@ def create_exercise(intent_request):
             "MuscleGroup": muscle_group
         }
     )
-    try_ex(lambda: session_attributes.pop('chainCreateExercise'))
     if try_ex(lambda: session_attributes['chainRecordWeightLift']):
         try_ex(lambda: session_attributes.pop('chainRecordWeightLift'))
         return confirm_intent(
@@ -277,6 +277,26 @@ def create_exercise(intent_request):
                 'contentType': 'PlainText',
                 'content': 'Got it! {} has been added to your exercises. Would you like to finish inputting your '
                            'workout?'.format(exercise_name)
+            }
+        )
+    elif try_ex(lambda: session_attributes['chainCreateWorkout']):
+        try_ex(lambda: session_attributes.pop('chainCreateWorkout'))
+        return confirm_intent(
+            session_attributes,
+            'CreateWorkout',
+            {
+                'Monday': session_attributes['Monday'],
+                'Tuesday': session_attributes['Tuesday'],
+                'Wednesday': session_attributes['Wednesday'],
+                'Thursday': session_attributes['Thursday'],
+                'Friday': session_attributes['Friday'],
+                'Saturday': session_attributes['Saturday'],
+                'Sunday': session_attributes['Sunday']
+            },
+            {
+                'contentType': 'PlainText',
+                'content': 'Got it! {} has been added to your exercises. Would you like to finish creating your '
+                           'workout schedule?'.format(exercise_name)
             }
         )
     else:

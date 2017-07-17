@@ -251,7 +251,7 @@ def record_weightlift(intent_request):
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
             if not is_valid_exercise(exercise_name, intent_request):
-                session_attributes['chainCreateExercise'] = True
+                session_attributes['chainRecordWeightLift'] = True
                 return confirm_intent(
                     session_attributes,
                     'CreateExercise',

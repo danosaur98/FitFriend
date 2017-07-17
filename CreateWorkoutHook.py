@@ -133,6 +133,16 @@ def get_previous_exercises_remaining(user):
     return user['Item']['dailyNutrientsAndWorkouts'][latest_day]['exercisesRemaining']
 
 
+def generate_previous_exercises_remaining_string(workout):
+    if len(workout) == 1:
+        return "You had " + workout[0] + " left."
+    workout_string = "You had "
+    for item in workout[0:-1]:
+        workout_string += item + ", "
+    workout_string += "and " + workout[-1] + " left. "
+    return workout_string
+
+
 def generate_exercise_array(workout):
     if workout is not None:
         return workout.split(', ')
@@ -174,7 +184,49 @@ def is_valid_exercise(exercise, intent_request):
     return False
 
 
-def validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday):
+def validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday, intent_request):
+    if monday is not None:
+        for exercise in monday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Monday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
+    if tuesday is not None:
+        for exercise in tuesday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Tuesday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
+    if wednesday is not None:
+        for exercise in wednesday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Wednesday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
+    if thursday is not None:
+        for exercise in thursday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Thursday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
+    if friday is not None:
+        for exercise in friday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Friday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
+    if saturday is not None:
+        for exercise in saturday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Saturday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
+    if sunday is not None:
+        for exercise in sunday:
+            if not is_valid_exercise(exercise, intent_request):
+                return build_validation_result(False, 'Sunday',
+                                               '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise))
     return build_validation_result(True, None, None)
 
 
@@ -186,9 +238,10 @@ def create_workout(intent_request):
     tuesday = generate_exercise_array(get_slots(intent_request)["Tuesday"])
     wednesday = generate_exercise_array(get_slots(intent_request)["Wednesday"])
     thursday = generate_exercise_array(get_slots(intent_request)["Thursday"])
-    friday = generate_exercise_array(intent_request["Friday"])
+    friday = generate_exercise_array(get_slots(intent_request)["Friday"])
     saturday = generate_exercise_array(get_slots(intent_request)["Saturday"])
     sunday = generate_exercise_array(get_slots(intent_request)["Sunday"])
+    workout_routine = [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
     user = get_user(intent_request)
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
@@ -221,16 +274,51 @@ def create_workout(intent_request):
                     }
                 )
         slots = get_slots(intent_request)
-        validation_result = validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday)
+        validation_result = validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday,
+                                                    intent_request)
         if not validation_result['isValid']:
             slots[validation_result['violatedSlot']] = None
+            for weekday in workout_routine:
+                if weekday is not None:
+                    for exercise in weekday:
+                        if not is_valid_exercise(exercise, intent_request):
+                            session_attributes['chainCreateWorkout'] = True
+                            session_attributes['Monday'] = get_slots(intent_request)["Monday"]
+                            session_attributes['Tuesday'] = get_slots(intent_request)["Tuesday"]
+                            session_attributes['Wednesday'] = get_slots(intent_request)["Wednesday"]
+                            session_attributes['Thursday'] = get_slots(intent_request)["Thursday"]
+                            session_attributes['Friday'] = get_slots(intent_request)["Friday"]
+                            session_attributes['Saturday'] = get_slots(intent_request)["Saturday"]
+                            session_attributes['Sunday'] = get_slots(intent_request)["Sunday"]
+                            return confirm_intent(
+                                session_attributes,
+                                'CreateExercise',
+                                {
+                                    'Exercise': exercise,
+                                    'MuscleGroup': None
+                                },
+                                {
+                                    'contentType': 'PlainText',
+                                    'content': '{} is not recognized as one of your exercises. Would '
+                                               'you like to add it?'.format(exercise)
+
+                                }
+                            )
             return elicit_slot(intent_request['sessionAttributes'],
                                intent_request['currentIntent']['name'],
                                slots,
                                validation_result['violatedSlot'],
                                validation_result['message'])
+
         return delegate(session_attributes, get_slots(intent_request))
 
+    try_ex(lambda: session_attributes.pop('Monday'))
+    try_ex(lambda: session_attributes.pop('Tuesday'))
+    try_ex(lambda: session_attributes.pop('Wednesday'))
+    try_ex(lambda: session_attributes.pop('Thursday'))
+    try_ex(lambda: session_attributes.pop('Friday'))
+    try_ex(lambda: session_attributes.pop('Saturday'))
+    try_ex(lambda: session_attributes.pop('Sunday'))
     users.update_item(
         Key={
             'user': intent_request['userId']
