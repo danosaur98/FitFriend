@@ -131,7 +131,7 @@ def is_valid_exercise(exercise, intent_request):
     return False
 
 
-def validate_create_workout(Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday):
+def validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday):
     return build_validation_result(True, None, None)
 
 
@@ -160,6 +160,22 @@ def create_workout(intent_request):
                              'contentType': 'PlainText',
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
+        if is_new_day(user):
+            create_new_day(user, intent_request)
+            if not len(get_previous_exercises_remaining(user)) == 0 and not get_previous_exercises_remaining(user)[
+                0] == 'rest':
+                return confirm_intent(
+                    session_attributes,
+                    "GiveExcuse",
+                    {
+                        'Excuse': None,
+                        'Violation': 'workout'
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday?'
+                    }
+                )
         slots = get_slots(intent_request)
         validation_result = validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday)
         if not validation_result['isValid']:

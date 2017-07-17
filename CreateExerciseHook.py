@@ -96,6 +96,43 @@ def is_valid_user(user):
     return False
 
 
+def is_new_day(user):
+    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+        return True
+    return False
+
+
+def create_new_day(user, intent_request):
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+        ExpressionAttributeValues={
+            ':d': {
+                "nutritionRemaining": {
+                    'calorie': user['Item']['nutrientGoal']['calorie'],
+                    'protein': user['Item']['nutrientGoal']['protein'],
+                    'carbohydrate': user['Item']['nutrientGoal']['carbohydrate'],
+                    'fat': user['Item']['nutrientGoal']['fat'],
+                },
+                "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
+                "violations": [],
+
+            },
+
+        },
+        ExpressionAttributeNames={
+            '#day': time.strftime("%m/%d/%Y"),
+        },
+    )
+
+
+def get_previous_exercises_remaining(user):
+    latest_day = sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
+    return user['Item']['dailyNutrientsAndWorkouts'][latest_day]['exercisesRemaining']
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -145,6 +182,22 @@ def create_exercise(intent_request):
                              'contentType': 'PlainText',
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
+        if is_new_day(user):
+            create_new_day(user, intent_request)
+            if not len(get_previous_exercises_remaining(user)) == 0 and not get_previous_exercises_remaining(user)[
+                0] == 'rest':
+                return confirm_intent(
+                    session_attributes,
+                    "GiveExcuse",
+                    {
+                        'Excuse': None,
+                        'Violation': 'workout'
+                    },
+                    {
+                        'contentType': 'PlainText',
+                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday?'
+                    }
+                )
         slots = get_slots(intent_request)
         validation_result = validate_create_exercise(exercise_name, muscle_group)
         if not validation_result['isValid']:
