@@ -119,7 +119,8 @@ def create_new_day(user, intent_request):
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
                 "foodLog": {},
-                "exerciseLog": {}
+                "exerciseLog": {},
+                "excuses": {}
             },
 
         },
@@ -248,8 +249,6 @@ def create_workout(intent_request):
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
     if source == 'DialogCodeHook':
-        # Perform basic validation on the supplied input slots.
-        # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
@@ -261,6 +260,8 @@ def create_workout(intent_request):
             create_new_day(user, intent_request)
             exercises_remaining = get_previous_exercises_remaining(user)
             if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
+                session_attributes['workoutViolationDate'] = \
+                    sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",
@@ -277,8 +278,13 @@ def create_workout(intent_request):
         slots = get_slots(intent_request)
         validation_result = validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturday, sunday,
                                                     intent_request)
+        if confirmation_status == 'Denied':
+            try_ex(lambda: session_attributes.pop('chainCreateWorkout'))
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {'contentType': 'PlainText',
+                          'content': 'It\'s all good in the hood!'})
         if not validation_result['isValid']:
-            # slots[validation_result['violatedSlot']] = None
             for weekday in workout_routine:
                 if weekday is not None:
                     for exercise in weekday:

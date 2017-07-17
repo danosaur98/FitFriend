@@ -206,8 +206,6 @@ def personalize(intent_request):
     source = intent_request['invocationSource']
 
     if source == 'DialogCodeHook':
-        # Perform basic validation on the supplied input slots.
-        # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
 
         validation_result = validate_personalize(name, gender, age, measurementsystem, height, weight, goal, activity,

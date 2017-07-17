@@ -118,7 +118,8 @@ def create_new_day(user, intent_request):
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
                 "foodLog": {},
-                "exerciseLog": {}
+                "exerciseLog": {},
+                "excuses": {}
             },
 
         },
@@ -183,13 +184,18 @@ def generate_day_information_string(day, user):
             int(nutrient_goal['calorie']) - int(nutrition_remaining['calorie'])) + ' cals, ' + str(
             int(nutrient_goal['protein']) - int(nutrition_remaining['protein'])) + ' p, ' + str(
             int(nutrient_goal['carbohydrate']) - int(nutrition_remaining['carbohydrate'])) + ' c, ' + str(
-            int(nutrient_goal['fat']) - int(nutrition_remaining['fat'])) + ' fat, '
+            int(nutrient_goal['fat']) - int(nutrition_remaining['fat'])) + ' f, '
     violations = user['Item']['dailyNutrientsAndWorkouts'][day]['violations']
     if not len(violations) == 0:
+        if 'workout' in violations:
+            information_string += 'you didn\'t finish all your workouts for today'
+            violations.remove('workout')
         information_string += ' and you went over your '
         for violation in violations:
+            if violation == 'workout':
+                continue
             information_string += violation + ', '
-        information_string += ' limits.'
+        information_string += 'limits.'
     if len(information_string) == 0:
         return 'Nothing yet!'
     return information_string
@@ -218,8 +224,6 @@ def get_day_information(intent_request):
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
 
     if source == 'DialogCodeHook':
-        # Perform basic validation on the supplied input slots.
-        # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
@@ -231,6 +235,8 @@ def get_day_information(intent_request):
             create_new_day(user, intent_request)
             exercises_remaining = get_previous_exercises_remaining(user)
             if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
+                session_attributes['workoutViolationDate'] = \
+                    sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",

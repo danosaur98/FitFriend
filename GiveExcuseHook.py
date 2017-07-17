@@ -4,7 +4,7 @@ import os
 import logging
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-excuses = dynamodb.Table('Excuses')
+users = dynamodb.Table('Users')
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -66,6 +66,35 @@ def delegate(session_attributes, slots):
 """ --- Helper Functions --- """
 
 
+def try_ex(func):
+    """
+    Call passed in function in try block. If KeyError is encountered return None.
+    This function is intended to be used to safely access dictionary.
+
+    Note that this function would have negative impact on performance.
+    """
+
+    try:
+        return func()
+    except KeyError:
+        return None
+
+
+def get_user(intent_request):
+    response = users.get_item(
+        Key={
+            'user': intent_request['userId'],
+        }
+    )
+    return response
+
+
+def is_valid_user(user):
+    if 'Item' in user:
+        return True
+    return False
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -88,31 +117,52 @@ def validate_give_excuse(excuse, violation, source_intent):
 
 
 def give_excuse(intent_request):
-    """
-    Performs dialog management and fulfillment for ordering flowers.
-    Beyond fulfillment, the implementation of this intent demonstrates the use of the elicitSlot dialog action
-    in slot validation and re-prompting.
-    """
-
     excuse = get_slots(intent_request)["Excuse"]
     violation = get_slots(intent_request)["Violation"]
     source = intent_request['invocationSource']
+    user = get_user(intent_request)
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
     session_attributes = intent_request['sessionAttributes'] if intent_request[
                                                                     'sessionAttributes'] is not None else {}
+    workout_violation_date = try_ex(lambda: session_attributes['workoutViolationDate'])
 
     if source == 'DialogCodeHook':
-        # Perform basic validation on the supplied input slots.
-        # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         slots = get_slots(intent_request)
+        if not is_valid_user(user):
+            return close(intent_request['sessionAttributes'],
+                         'Fulfilled',
+                         {
+                             'contentType': 'PlainText',
+                             'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
+                         })
         if confirmation_status == 'Denied':
-            excuses.put_item(
-                Item={
-                    "UserId": intent_request['userId'],
-                    "Date": time.strftime("%m/%d/%Y %T"),
-                    "Excuse": 'I am weak both mentally and physically',
-                    "Violation": violation.split(),
-                }
+            violations = violation.split()
+            if workout_violation_date:
+                day = try_ex(lambda: session_attributes['workoutViolationDate'])
+                try_ex(lambda: session_attributes.pop('workoutViolationDate'))
+                overall_violations = user['Item']['dailyNutrientsAndWorkouts'][day]['violations']
+                overall_violations.append('workout')
+            else:
+                day = time.strftime("%Y-%m-%d")
+                overall_violations = user['Item']['dailyNutrientsAndWorkouts'][day]['violations']
+
+            current_excuses = user['Item']['dailyNutrientsAndWorkouts'][day]['excuses']
+            current_excuses[time.strftime('%T')] = {
+                "Excuse": excuse,
+                "Violation": violations
+            }
+            users.update_item(
+                Key={
+                    'user': intent_request['userId']
+                },
+                UpdateExpression="set dailyNutrientsAndWorkouts.#day.excuses = :e, dailyNutrientsAndWorkouts.#day.violations = :v",
+                ExpressionAttributeValues={
+                    ':e': current_excuses,
+                    ':v': overall_violations
+                },
+                ExpressionAttributeNames={
+                    '#day': day
+                },
             )
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
@@ -130,13 +180,33 @@ def give_excuse(intent_request):
 
         return delegate(session_attributes, get_slots(intent_request))
 
-    excuses.put_item(
-        Item={
-            "UserId": intent_request['userId'],
-            "Date": time.strftime("%m/%d/%Y %T"),
-            "Excuse": excuse,
-            "Violation": violation.split(),
-        }
+    violations = violation.split()
+    if workout_violation_date:
+        day = try_ex(lambda: session_attributes['workoutViolationDate'])
+        try_ex(lambda: session_attributes.pop('workoutViolationDate'))
+        overall_violations = user['Item']['dailyNutrientsAndWorkouts'][day]['violations']
+        overall_violations.append('workout')
+    else:
+        day = time.strftime("%Y-%m-%d")
+        overall_violations = user['Item']['dailyNutrientsAndWorkouts'][day]['violations']
+
+    current_excuses = user['Item']['dailyNutrientsAndWorkouts'][day]['excuses']
+    current_excuses[time.strftime('%T')] = {
+        "Excuse": excuse,
+        "Violation": violations
+    }
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day.excuses = :e, dailyNutrientsAndWorkouts.#day.violations = :v",
+        ExpressionAttributeValues={
+            ':e': current_excuses,
+            ':v': overall_violations
+        },
+        ExpressionAttributeNames={
+            '#day': day
+        },
     )
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',

@@ -119,7 +119,8 @@ def create_new_day(user, intent_request):
                 "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
                 "violations": [],
                 "foodLog": {},
-                "exerciseLog": {}
+                "exerciseLog": {},
+                "excuses": {}
             },
 
         },
@@ -185,8 +186,6 @@ def create_exercise(intent_request):
     chain_create_workout = try_ex(lambda: session_attributes['chainCreateWorkout'])
 
     if source == 'DialogCodeHook':
-        # Perform basic validation on the supplied input slots.
-        # Use the elicitSlot dialog action to re-prompt for the first violation detected.
         if not is_valid_user(user):
             return close(intent_request['sessionAttributes'],
                          'Fulfilled',
@@ -198,6 +197,8 @@ def create_exercise(intent_request):
             create_new_day(user, intent_request)
             exercises_remaining = get_previous_exercises_remaining(user)
             if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
+                session_attributes['workoutViolationDate'] = \
+                    sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",
