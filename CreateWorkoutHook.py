@@ -96,6 +96,49 @@ def is_valid_user(user):
     return False
 
 
+def is_new_day(user):
+    if not time.strftime("%m/%d/%Y") in user['Item']['dailyNutrientsAndWorkouts']:
+        return True
+    return False
+
+
+def create_new_day(user, intent_request):
+    users.update_item(
+        Key={
+            'user': intent_request['userId']
+        },
+        UpdateExpression="set dailyNutrientsAndWorkouts.#day = :d",
+        ExpressionAttributeValues={
+            ':d': {
+                "nutritionRemaining": {
+                    'calorie': user['Item']['nutrientGoal']['calorie'],
+                    'protein': user['Item']['nutrientGoal']['protein'],
+                    'carbohydrate': user['Item']['nutrientGoal']['carbohydrate'],
+                    'fat': user['Item']['nutrientGoal']['fat'],
+                },
+                "exercisesRemaining": user['Item']['workoutSchedule'][time.strftime('%A')],
+                "violations": [],
+
+            },
+
+        },
+        ExpressionAttributeNames={
+            '#day': time.strftime("%m/%d/%Y"),
+        },
+    )
+
+
+def get_previous_exercises_remaining(user):
+    latest_day = sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
+    return user['Item']['dailyNutrientsAndWorkouts'][latest_day]['exercisesRemaining']
+
+
+def generate_exercise_array(workout):
+    if workout is not None:
+        return workout.split(', ')
+    return workout
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -139,13 +182,13 @@ def validate_create_workout(monday, tuesday, wednesday, thursday, friday, saturd
 
 
 def create_workout(intent_request):
-    monday = get_slots(intent_request)["Monday"]
-    tuesday = get_slots(intent_request)["Tuesday"]
-    wednesday = get_slots(intent_request)["Wednesday"]
-    thursday = get_slots(intent_request)["Thursday"]
-    friday = get_slots(intent_request)["Friday"]
-    saturday = get_slots(intent_request)["Saturday"]
-    sunday = get_slots(intent_request)["Sunday"]
+    monday = generate_exercise_array(get_slots(intent_request)["Monday"])
+    tuesday = generate_exercise_array(get_slots(intent_request)["Tuesday"])
+    wednesday = generate_exercise_array(get_slots(intent_request)["Wednesday"])
+    thursday = generate_exercise_array(get_slots(intent_request)["Thursday"])
+    friday = generate_exercise_array(intent_request["Friday"])
+    saturday = generate_exercise_array(get_slots(intent_request)["Saturday"])
+    sunday = generate_exercise_array(get_slots(intent_request)["Sunday"])
     user = get_user(intent_request)
     source = intent_request['invocationSource']
     confirmation_status = intent_request['currentIntent']['confirmationStatus']
@@ -162,8 +205,8 @@ def create_workout(intent_request):
                          })
         if is_new_day(user):
             create_new_day(user, intent_request)
-            if not len(get_previous_exercises_remaining(user)) == 0 and not get_previous_exercises_remaining(user)[
-                0] == 'rest':
+            exercises_remaining = get_previous_exercises_remaining(user)
+            if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",
@@ -173,7 +216,8 @@ def create_workout(intent_request):
                     },
                     {
                         'contentType': 'PlainText',
-                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday?'
+                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday? {}'.format(
+                            generate_previous_exercises_remaining_string(exercises_remaining))
                     }
                 )
         slots = get_slots(intent_request)

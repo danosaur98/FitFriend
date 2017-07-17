@@ -133,6 +133,16 @@ def get_previous_exercises_remaining(user):
     return user['Item']['dailyNutrientsAndWorkouts'][latest_day]['exercisesRemaining']
 
 
+def generate_previous_exercises_remaining_string(workout):
+    if len(workout) == 1:
+        return "You had " + workout[0] + " left."
+    workout_string = "You had "
+    for item in workout[0:-1]:
+        workout_string += item + ", "
+    workout_string += "and " + workout[-1] + " left. "
+    return workout_string
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -178,8 +188,8 @@ def create_food(intent_request):
                          })
         if is_new_day(user):
             create_new_day(user, intent_request)
-            if not len(get_previous_exercises_remaining(user)) == 0 and not get_previous_exercises_remaining(user)[
-                0] == 'rest':
+            exercises_remaining = get_previous_exercises_remaining(user)
+            if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
                 return confirm_intent(
                     session_attributes,
                     "GiveExcuse",
@@ -189,7 +199,8 @@ def create_food(intent_request):
                     },
                     {
                         'contentType': 'PlainText',
-                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday?'
+                        'content': 'Do you have a valid excuse for why you didn\'t finish your workout yesterday? {}'.format(
+                            generate_previous_exercises_remaining_string(exercises_remaining))
                     }
                 )
         slots = get_slots(intent_request)
