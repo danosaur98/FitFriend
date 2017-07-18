@@ -169,26 +169,37 @@ def is_valid_exercise(exercise, intent_request):
     )
     if 'Item' in response:
         return True
+    else:
+        response = exercises.get_item(
+            Key={
+                'UserID': intent_request['userId'],
+                'ExerciseName': exercise.lower()
+            }
+        )
+        if 'Item' in response:
+            return True
     return False
 
 
-def get_known_exercises(intent_request):
-    response = exercises.query(
-        KeyConditionExpression=Key('UserID').eq('universal')
-    )
-    known_exercises = ""
-    for i in response['Items'][0:-1]:
-        known_exercises += i['ExerciseName'] + ', '
-    known_exercises += 'and ' + response['Items'][-1]['ExerciseName'] + '.'
-    return known_exercises
+def get_exercise_history_string(exercise, user):
+    if user['Item']['measurementSystem'] == 'imperial system':
+        measurement = 'lbs'
+    else:
+        measurement = 'kgs'
+    history = ""
+    for day, components in user['Item']['dailyNutrientsAndWorkouts'].items():
+        for exercise_time, exercises in (components['exerciseLog']).items():
+            if exercise == exercises['ExerciseName']:
+                history += "On " + str(day) + ", you did " + str(exercises['Weight']) + measurement + ' for ' + str(
+                    exercises['Reps'] + ' reps and ' + str(exercises['Sets'] + ' sets. '))
+    return history
 
 
 def validate_how_to_exercise(exercise, intent_request):
     if exercise is not None:
-        if not is_valid_exercise(exercise, intent_request):
+        if not is_valid_exercise(exercise.lower(), intent_request):
             return build_validation_result(False, 'Exercise',
-                                           'Hm, I\'m not sure how to do that one. Here\'s what I do know: {}'.format(
-                                               get_known_exercises(intent_request)))
+                                           '{} is not recognized as one of your exercises'.format(exercise))
 
     return build_validation_result(True, None, None)
 
@@ -196,7 +207,7 @@ def validate_how_to_exercise(exercise, intent_request):
 """ --- Functions that control the bot's behavior --- """
 
 
-def how_to_exercise(intent_request):
+def get_exercise_history(intent_request):
     exercise_name = get_slots(intent_request)["Exercise"]
     user = get_user(intent_request)
     source = intent_request['invocationSource']
@@ -210,8 +221,8 @@ def how_to_exercise(intent_request):
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
         if is_new_day(user):
-            exercises_remaining = get_previous_exercises_remaining(user)
             create_new_day(user, intent_request)
+            exercises_remaining = get_previous_exercises_remaining(user)
             if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
                 session_attributes['workoutViolationDate'] = \
                     sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
@@ -242,17 +253,12 @@ def how_to_exercise(intent_request):
                                validation_result['message'])
 
         return delegate(session_attributes, get_slots(intent_request))
-    exercise = exercises.get_item(
-        Key={
-            'UserID': 'universal',
-            'ExerciseName': exercise_name.lower()
-        }
-    )
+
     return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': 'Here\'s how to do {}: {}'.format(exercise_name, exercise['Item']['HowTo'])
+                     'content': '{}'.format(get_exercise_history_string(exercise_name, user))
                  })
 
 
@@ -270,8 +276,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'GetHowToExercise':
-        return how_to_exercise(intent_request)
+    if intent_name == 'GetExerciseHistory':
+        return get_exercise_history(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

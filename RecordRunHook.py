@@ -168,8 +168,8 @@ def record_run(intent_request):
                              'content': "Glad to see you're so eager! Say \'hey fitfriend\' to get started!"
                          })
         if is_new_day(user):
-            create_new_day(user, intent_request)
             exercises_remaining = get_previous_exercises_remaining(user)
+            create_new_day(user, intent_request)
             if not len(exercises_remaining) == 0 and not exercises_remaining[0] == 'rest':
                 session_attributes['workoutViolationDate'] = \
                     sorted(list(user['Item']['dailyNutrientsAndWorkouts'].keys()))[-1]
