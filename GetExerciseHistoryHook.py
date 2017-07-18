@@ -2,7 +2,6 @@ import boto3
 import time
 import os
 import logging
-from boto3.dynamodb.conditions import Key, Attr
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 exercises = dynamodb.Table('Exercises')
