@@ -17,19 +17,6 @@ def get_slots(intent_request):
     return intent_request['currentIntent']['slots']
 
 
-def elicit_slot(session_attributes, intent_name, slots, slot_to_elicit, message):
-    return {
-        'sessionAttributes': session_attributes,
-        'dialogAction': {
-            'type': 'ElicitSlot',
-            'intentName': intent_name,
-            'slots': slots,
-            'slotToElicit': slot_to_elicit,
-            'message': message
-        }
-    }
-
-
 def confirm_intent(session_attributes, intent_name, slots, message):
     return {
         'sessionAttributes': session_attributes,
@@ -146,69 +133,27 @@ def generate_previous_exercises_remaining_string(workout):
     return workout_string
 
 
-def build_validation_result(is_valid, violated_slot, message_content):
-    if message_content is None:
-        return {
-            "isValid": is_valid,
-            "violatedSlot": violated_slot,
-        }
-
-    return {
-        'isValid': is_valid,
-        'violatedSlot': violated_slot,
-        'message': {'contentType': 'PlainText', 'content': message_content}
-    }
+def get_violation_string(violations):
+    violation_string = ""
+    for violation in violations[0:-1]:
+        violation_string += str(violation) + ', '
+    violation_string += violations[-1]
+    return violation_string
 
 
-def is_valid_exercise(exercise, intent_request):
-    response = exercises.get_item(
-        Key={
-            'UserID': 'universal',
-            'ExerciseName': exercise.lower()
-        }
-    )
-    if 'Item' in response:
-        return True
-    else:
-        response = exercises.get_item(
-            Key={
-                'UserID': intent_request['userId'],
-                'ExerciseName': exercise.lower()
-            }
-        )
-        if 'Item' in response:
-            return True
-    return False
-
-
-def get_exercise_history_string(exercise, user):
-    if user['Item']['measurementSystem'] == 'imperial system':
-        measurement = 'lbs'
-    else:
-        measurement = 'kgs'
-    history = ""
+def get_excuses_string(user):
+    excuses_string = ""
     for day, components in user['Item']['dailyNutrientsAndWorkouts'].items():
-        for exercise_time, exercises in (components['exerciseLog']).items():
-            if exercise == exercises['ExerciseName']:
-                history += "On " + str(day) + ", you did " + str(exercises['Weight']) + measurement + ' for ' + str(
-                    exercises['Reps'] + ' reps and ' + str(exercises['Sets'] + ' sets. '))
-    return history
-
-
-def validate_how_to_exercise(exercise, intent_request):
-    if exercise is not None:
-        if not is_valid_exercise(exercise.lower(), intent_request):
-            return build_validation_result(False, 'Exercise',
-                                           '{} is not recognized as one of your exercises'.format(exercise))
-
-    return build_validation_result(True, None, None)
+        for time, excuse in (components['excuses']).items():
+            excuses_string += "On " + day + ", your excuse for " + get_violation_string(
+                excuse['Violation']) + " violations was \"" + excuse['Excuse'] + '\". '
+    return excuses_string
 
 
 """ --- Functions that control the bot's behavior --- """
 
 
-def get_exercise_history(intent_request):
-    exercise_name = get_slots(intent_request)["Exercise"]
+def get_excuses(intent_request):
     user = get_user(intent_request)
     source = intent_request['invocationSource']
     session_attributes = intent_request['sessionAttributes'] if intent_request['sessionAttributes'] is not None else {}
@@ -239,16 +184,6 @@ def get_exercise_history(intent_request):
                             generate_previous_exercises_remaining_string(exercises_remaining))
                     }
                 )
-        slots = get_slots(intent_request)
-
-        validation_result = validate_how_to_exercise(exercise_name, intent_request)
-        if not validation_result['isValid']:
-            slots[validation_result['violatedSlot']] = None
-            return elicit_slot(intent_request['sessionAttributes'],
-                               intent_request['currentIntent']['name'],
-                               slots,
-                               validation_result['violatedSlot'],
-                               validation_result['message'])
 
         return delegate(session_attributes, get_slots(intent_request))
 
@@ -256,7 +191,7 @@ def get_exercise_history(intent_request):
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': '{}'.format(get_exercise_history_string(exercise_name, user))
+                     'content': '{}'.format(get_excuses_string(user))
                  })
 
 
@@ -274,8 +209,8 @@ def dispatch(intent_request):
     intent_name = intent_request['currentIntent']['name']
 
     # Dispatch to your bot's intent handlers
-    if intent_name == 'GetExerciseHistory':
-        return get_exercise_history(intent_request)
+    if intent_name == 'GetExcuses':
+        return get_excuses(intent_request)
 
     raise Exception('Intent with name ' + intent_name + ' not supported')
 

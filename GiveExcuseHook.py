@@ -148,7 +148,7 @@ def give_excuse(intent_request):
 
             current_excuses = user['Item']['dailyNutrientsAndWorkouts'][day]['excuses']
             current_excuses[time.strftime('%T')] = {
-                "Excuse": excuse,
+                "Excuse": 'I am both mentally and physically weak.',
                 "Violation": violations
             }
             users.update_item(
