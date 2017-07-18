@@ -162,15 +162,20 @@ def generate_day_information_string(day, user):
     information_string = ""
     if user['Item']['measurementSystem'] == 'imperial system':
         measurement = 'lbs'
+        distance = 'mi'
     else:
         measurement = 'kgs'
+        distance = 'km'
     exercise_log = user['Item']['dailyNutrientsAndWorkouts'][day]['exerciseLog']
     if not len(exercise_log) == 0:
         information_string += "You did "
         for exercise_time, exercise in exercise_log.items():
-            information_string += exercise['ExerciseName'] + ' at ' + exercise['Weight'] + measurement + ' for ' + \
-                                  exercise[
-                                      'Reps'] + ' reps and ' + exercise['Sets'] + ' sets, '
+            if exercise['ExerciseName'] == 'run':
+                information_string += 'ran ' + str(exercise['Distance']) + distance + ' in ' + str(exercise['Duration']) + ', '
+            else:
+                information_string += str(exercise['ExerciseName']) + ' at ' + str(exercise['Weight']) + measurement + ' for ' + \
+                                      str(exercise[
+                                          'Reps']) + ' reps and ' + str(exercise['Sets']) + ' sets, '
     food_log = user['Item']['dailyNutrientsAndWorkouts'][day]['foodLog']
     if not len(food_log) == 0:
         for food_time, food in food_log.items():

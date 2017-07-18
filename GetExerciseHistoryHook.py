@@ -191,6 +191,8 @@ def get_exercise_history_string(exercise, user):
             if exercise == exercises['ExerciseName']:
                 history += "On " + str(day) + ", you did " + str(exercises['Weight']) + measurement + ' for ' + str(
                     exercises['Reps'] + ' reps and ' + str(exercises['Sets'] + ' sets. '))
+    if history == "":
+        return 'Nothing yet!'
     return history
 
 

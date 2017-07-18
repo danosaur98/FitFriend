@@ -130,6 +130,20 @@ def generate_previous_exercises_remaining_string(workout):
     return workout_string
 
 
+def generate_workout_string(workout):
+    if len(workout) == 0:
+        return "Congratulations! You finished all your required workouts for today :) "
+    if workout[0].lower() == 'rest':
+        return "Today's a rest day, but I'm so happy to see you working out nonetheless!"
+    if len(workout) == 1:
+        return "You still have to " + workout[0] + " today."
+    workout_string = "You still have to do "
+    for item in workout[0:-1]:
+        workout_string += item + ", "
+    workout_string += "and " + workout[-1] + " today. "
+    return workout_string
+
+
 def build_validation_result(is_valid, violated_slot, message_content):
     if message_content is None:
         return {
@@ -219,11 +233,11 @@ def record_run(intent_request):
             '#day': time.strftime("%Y-%m-%d"),
         },
     )
-    return close(session_attributes,
+    return close(intent_request['sessionAttributes'],
                  'Fulfilled',
                  {
                      'contentType': 'PlainText',
-                     'content': 'Keep going!'
+                     'content': 'Good job!! {}'.format(generate_workout_string(exercises_remaining))
                  })
 
 

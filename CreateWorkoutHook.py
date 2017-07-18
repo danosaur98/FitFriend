@@ -357,6 +357,9 @@ def create_workout(intent_request):
             },
             ':e': todays_workout
         },
+        ExpressionAttributeNames={
+            '#day': time.strftime("%Y-%m-%d"),
+        },
     )
 
     return close(intent_request['sessionAttributes'],

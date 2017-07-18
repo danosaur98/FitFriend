@@ -39,7 +39,7 @@ def get_help(intent_request):
                                 '#GRAMS OR SERVINGS of #FOOD.\' If you want to remember what you did on a certain day, '
                                 'say \'tell me about #DAY.\' If you want to see your progression on an exercise, '
                                 'say \'Show me my record with #EXERCISE.\' If you want to see all the excuses you\'ve '
-                                'given, say \'What excuses have I given before\' If you want to set your own '
+                                'given, say \'Make me disappointed in myself\' If you want to set your own '
                                 'nutrition goals, say \'I would like to set my own nutrition goals.\' If you want to '
                                 'set your own workout, say \'I would like to set my own workout\' '
                  })
