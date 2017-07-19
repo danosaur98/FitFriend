@@ -1,0 +1,95 @@
+{
+    "name": "FitFriend",
+    "intents": [
+        {
+            "intentName": "GetDayInformation",
+            "intentVersion": "2"
+        },
+        {
+            "intentName": "RecordRun",
+            "intentVersion": "9"
+        },
+        {
+            "intentName": "CreateExercise",
+            "intentVersion": "7"
+        },
+        {
+            "intentName": "GiveExcuse",
+            "intentVersion": "4"
+        },
+        {
+            "intentName": "RecordMeal",
+            "intentVersion": "20"
+        },
+        {
+            "intentName": "CreateFoods",
+            "intentVersion": "11"
+        },
+        {
+            "intentName": "RecordWeightlift",
+            "intentVersion": "32"
+        },
+        {
+            "intentName": "Personalize",
+            "intentVersion": "17"
+        },
+        {
+            "intentName": "GetExerciseHistory",
+            "intentVersion": "1"
+        },
+        {
+            "intentName": "Help",
+            "intentVersion": "7"
+        },
+        {
+            "intentName": "CreateWorkout",
+            "intentVersion": "7"
+        },
+        {
+            "intentName": "GetHowToExercise",
+            "intentVersion": "3"
+        },
+        {
+            "intentName": "SetOwnGoal",
+            "intentVersion": "3"
+        },
+        {
+            "intentName": "GetExcuses",
+            "intentVersion": "3"
+        }
+    ],
+    "clarificationPrompt": {
+        "messages": [
+            {
+                "contentType": "PlainText",
+                "content": "Sorry, can you please clarify?"
+            },
+            {
+                "contentType": "PlainText",
+                "content": "Sorry, can you please say that again?"
+            },
+            {
+                "contentType": "PlainText",
+                "content": "Sorry, can you please repeat that?"
+            }
+        ],
+        "maxAttempts": 5
+    },
+    "abortStatement": {
+        "messages": [
+            {
+                "contentType": "PlainText",
+                "content": "Sorry, I didn't get what you mean :( say 'help' for a list of commands"
+            }
+        ]
+    },
+    "status": "READY",
+    "lastUpdatedDate": 1500378255.479,
+    "createdDate": 1497281827.795,
+    "idleSessionTTLInSeconds": 300,
+    "voiceId": "0",
+    "checksum": "de25beb4-1f8d-489a-b30f-44a14d4aefc3",
+    "version": "$LATEST",
+    "locale": "en-US",
+    "childDirected": true
+}

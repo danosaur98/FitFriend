@@ -1,15 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="ced567b1-4900-45ab-b635-dd9f57bcae93" name="Default" comment="made help hook">
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/FitFriend.iml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/modules.xml" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/CreateWorkoutHook.py" afterPath="$PROJECT_DIR$/CreateWorkoutHook.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/GetDayInfoHook.py" afterPath="$PROJECT_DIR$/GetDayInfoHook.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/GetExerciseHistoryHook.py" afterPath="$PROJECT_DIR$/GetExerciseHistoryHook.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/HelpHook.py" afterPath="$PROJECT_DIR$/HelpHook.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/RecordRunHook.py" afterPath="$PROJECT_DIR$/RecordRunHook.py" />
+    <list default="true" id="ced567b1-4900-45ab-b635-dd9f57bcae93" name="Default" comment="">
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/bot.json" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -40,7 +34,7 @@
         <entry file="file://$PROJECT_DIR$/RecordRunHook.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="549">
-              <caret line="203" column="0" lean-forward="true" selection-start-line="203" selection-start-column="0" selection-end-line="203" selection-end-column="0" />
+              <caret line="203" column="0" lean-forward="false" selection-start-line="203" selection-start-column="0" selection-end-line="203" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -50,7 +44,7 @@
         <entry file="file://$PROJECT_DIR$/RecordMealHook.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="210">
-              <caret line="408" column="10" lean-forward="true" selection-start-line="406" selection-start-column="8" selection-end-line="408" selection-end-column="10" />
+              <caret line="408" column="10" lean-forward="false" selection-start-line="406" selection-start-column="8" selection-end-line="408" selection-end-column="10" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -62,7 +56,7 @@
         <entry file="file://$PROJECT_DIR$/GetDayInfoHook.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-1644">
-              <caret line="174" column="17" lean-forward="true" selection-start-line="174" selection-start-column="17" selection-end-line="174" selection-end-column="17" />
+              <caret line="174" column="17" lean-forward="false" selection-start-line="174" selection-start-column="17" selection-end-line="174" selection-end-column="17" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -98,7 +92,7 @@
         <entry file="file://$PROJECT_DIR$/HelpHook.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-165">
-              <caret line="13" column="0" lean-forward="true" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
+              <caret line="13" column="0" lean-forward="false" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -110,7 +104,7 @@
         <entry file="file://$PROJECT_DIR$/GetExerciseHistoryHook.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="177">
-              <caret line="181" column="0" lean-forward="true" selection-start-line="181" selection-start-column="0" selection-end-line="181" selection-end-column="0" />
+              <caret line="181" column="0" lean-forward="false" selection-start-line="181" selection-start-column="0" selection-end-line="181" selection-end-column="0" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -122,7 +116,7 @@
         <entry file="file://$PROJECT_DIR$/CreateWorkoutHook.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="449">
-              <caret line="358" column="10" lean-forward="true" selection-start-line="0" selection-start-column="0" selection-end-line="404" selection-end-column="0" />
+              <caret line="358" column="10" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="404" selection-end-column="0" />
               <folding>
                 <element signature="e#0#12#0" expanded="true" />
               </folding>
@@ -656,7 +650,14 @@
       <option name="project" value="LOCAL" />
       <updated>1500354766370</updated>
     </task>
-    <option name="localTasksCounter" value="42" />
+    <task id="LOCAL-00042" summary="last fixes">
+      <created>1500403306508</created>
+      <option name="number" value="00042" />
+      <option name="presentableId" value="LOCAL-00042" />
+      <option name="project" value="LOCAL" />
+      <updated>1500403306508</updated>
+    </task>
+    <option name="localTasksCounter" value="43" />
     <servers />
   </component>
   <component name="TodoView">
@@ -695,7 +696,6 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="correctly returns nutrition values to user" />
     <MESSAGE value="added violation stuff" />
     <MESSAGE value="added excuse system" />
     <MESSAGE value="plooey" />
@@ -720,7 +720,8 @@
     <MESSAGE value="fixed create day glitch, added get exercise history" />
     <MESSAGE value="added getexcuseshook" />
     <MESSAGE value="made help hook" />
-    <option name="LAST_COMMIT_MESSAGE" value="made help hook" />
+    <MESSAGE value="last fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="last fixes" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1098,7 +1099,7 @@
     <entry file="file://$PROJECT_DIR$/RecordRunHook.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="549">
-          <caret line="203" column="0" lean-forward="true" selection-start-line="203" selection-start-column="0" selection-end-line="203" selection-end-column="0" />
+          <caret line="203" column="0" lean-forward="false" selection-start-line="203" selection-start-column="0" selection-end-line="203" selection-end-column="0" />
           <folding />
         </state>
       </provider>
@@ -1106,7 +1107,7 @@
     <entry file="file://$PROJECT_DIR$/HelpHook.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-165">
-          <caret line="13" column="0" lean-forward="true" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
+          <caret line="13" column="0" lean-forward="false" selection-start-line="13" selection-start-column="0" selection-end-line="13" selection-end-column="0" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
           </folding>
@@ -1126,7 +1127,7 @@
     <entry file="file://$PROJECT_DIR$/RecordMealHook.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="210">
-          <caret line="408" column="10" lean-forward="true" selection-start-line="406" selection-start-column="8" selection-end-line="408" selection-end-column="10" />
+          <caret line="408" column="10" lean-forward="false" selection-start-line="406" selection-start-column="8" selection-end-line="408" selection-end-column="10" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
@@ -1136,7 +1137,7 @@
     <entry file="file://$PROJECT_DIR$/GetDayInfoHook.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-1644">
-          <caret line="174" column="17" lean-forward="true" selection-start-line="174" selection-start-column="17" selection-end-line="174" selection-end-column="17" />
+          <caret line="174" column="17" lean-forward="false" selection-start-line="174" selection-start-column="17" selection-end-line="174" selection-end-column="17" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
@@ -1146,7 +1147,7 @@
     <entry file="file://$PROJECT_DIR$/CreateWorkoutHook.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="449">
-          <caret line="358" column="10" lean-forward="true" selection-start-line="0" selection-start-column="0" selection-end-line="404" selection-end-column="0" />
+          <caret line="358" column="10" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="404" selection-end-column="0" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
@@ -1156,7 +1157,7 @@
     <entry file="file://$PROJECT_DIR$/GetExerciseHistoryHook.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="177">
-          <caret line="181" column="0" lean-forward="true" selection-start-line="181" selection-start-column="0" selection-end-line="181" selection-end-column="0" />
+          <caret line="181" column="0" lean-forward="false" selection-start-line="181" selection-start-column="0" selection-end-line="181" selection-end-column="0" />
           <folding>
             <element signature="e#0#12#0" expanded="true" />
           </folding>
